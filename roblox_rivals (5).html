@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ROBLOX RIVALS - VIBRANT CARTOON ARENA</title>
+    <!-- 引入 Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Tailwind CSS 用於現代 UI 佈局 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* === 核心樣式與潮流霓虹變數 === */
+        :root {
+            --neon-cyan: #00f3ff;
+            --neon-pink: #ff007f;
+            --neon-yellow: #fffb00;
+            --neon-green: #39ff14;
+            --dark-bg: #0b0c10;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0; 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            user-select: none; 
+            -webkit-user-select: none;
+        }
+        
+        body, html { 
+            width: 100%; 
+            height: 100%; 
+            overflow: hidden; 
+            background-color: var(--dark-bg); 
+            color: #fff; 
+        }
+
+        canvas { 
+            display: block; 
+            width: 100%; 
+            height: 100%; 
+        }
+
+        /* 霓虹邊框與文字陰影效果 */
+        .neon-shadow-cyan {
+            filter: drop-shadow(0 0 8px var(--neon-cyan));
+        }
+        .neon-text-pink {
+            color: var(--neon-pink);
+            text-shadow: 0 0 10px var(--neon-pink);
+        }
+        .neon-text-cyan {
+            color: var(--neon-cyan);
+            text-shadow: 0 0 10px var(--neon-cyan);
+        }
+        .neon-text-yellow {
+            color: var(--neon-yellow);
+            text-shadow: 0 0 10px var(--neon-yellow);
+        }
+
+        /* 鎖定鼠標提示 */
+        #blocker {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(8px);
+            transition: all 0.3s ease;
+        }
+
+        /* 擊中邊框泛紅特效 */
+        #damage-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 0px 0px rgba(255, 0, 127, 0);
+            pointer-events: none;
+            z-index: 50;
+            transition: box-shadow 0.1s ease-out;
+        }
+
+        /* 搖桿樣式 */
+        .joystick-container {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            border-radius: 50%;
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            touch-action: none;
+            display: none; /* 行動端動態啟用 */
+            z-index: 60;
+            backdrop-filter: blur(4px);
+        }
+
+        .joystick-knob {
+            width: 50px;
+            height: 50px;
+            background: radial-gradient(circle, var(--neon-cyan) 0%, #0088cc 100%);
+            border-radius: 50%;
+            position: absolute;
+            top: 35px;
+            left: 35px;
+            box-shadow: 0 0 15px var(--neon-cyan);
+        }
+
+        /* 准星 */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+            z-index: 40;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.05s ease;
+        }
+        .crosshair-line {
+            position: absolute;
+            background-color: var(--neon-green);
+            box-shadow: 0 0 5px var(--neon-green);
+        }
+        .crosshair-h { width: 14px; height: 2px; }
+        .crosshair-v { width: 2px; height: 14px; }
+        .crosshair-dot { width: 4px; height: 4px; border-radius: 50%; background-color: var(--neon-yellow); }
+
+        /* 擊中標示 (Hitmarker) */
+        #hitmarker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 30px;
+            height: 30px;
+            pointer-events: none;
+            z-index: 41;
+            transition: transform 0.1s ease;
+        }
+        .hit-line {
+            position: absolute;
+            width: 10px;
+            height: 2px;
+            background-color: var(--neon-pink);
+            box-shadow: 0 0 8px var(--neon-pink);
+        }
+        .hit-1 { transform: rotate(45deg) translate(8px, 0); }
+        .hit-2 { transform: rotate(135deg) translate(8px, 0); }
+        .hit-3 { transform: rotate(225deg) translate(8px, 0); }
+        .hit-4 { transform: rotate(315deg) translate(8px, 0); }
+
+        /* K.O. 動態提示 */
+        @keyframes ko-bounce {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.3); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 0; }
+        }
+        .ko-anim {
+            animation: ko-bounce 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="overflow-hidden select-none">
+
+    <!-- 擊中受傷閃爍 -->
+    <div id="damage-flash"></div>
+
+    <!-- K.O. 炫酷擊殺大字提示 -->
+    <div id="ko-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-50 opacity-0">
+        <div class="text-center">
+            <h1 id="ko-text" class="text-6xl md:text-8xl font-black italic tracking-wider uppercase text-yellow-300 filter drop-shadow-[0_5px_15px_rgba(234,179,8,0.8)]">K.O.</h1>
+            <p id="ko-subtext" class="text-xl md:text-2xl font-bold tracking-widest text-cyan-400 mt-2">HEADSHOT!</p>
+        </div>
+    </div>
+
+    <!-- 主選單 / 載入中 / 暫停遮罩 -->
+    <div id="blocker">
+        <div class="bg-slate-900/90 border-2 border-cyan-500 rounded-3xl p-8 max-w-lg w-[90%] text-center shadow-[0_0_35px_rgba(0,243,255,0.4)] neon-shadow-cyan">
+            <h1 class="text-5xl font-black tracking-tighter mb-2 italic text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-yellow-300">
+                ROBLOX RIVALS
+            </h1>
+            <p class="text-cyan-300 text-sm tracking-widest uppercase mb-6 font-bold">Vibrant Cartoon Arena V2</p>
+            
+            <div class="space-y-4 mb-6">
+                <button id="play-button" class="w-full py-4 bg-gradient-to-r from-pink-500 to-red-500 hover:from-pink-600 hover:to-red-600 text-white font-extrabold text-2xl rounded-2xl transform hover:scale-105 active:scale-95 transition shadow-lg shadow-pink-500/30">
+                    進入競技場 (PLAY)
+                </button>
+            </div>
+
+            <!-- 操作說明 -->
+            <div class="text-left text-xs text-slate-400 border-t border-slate-700/60 pt-4 space-y-2">
+                <p class="text-center font-bold text-slate-300 mb-1">【 操作指南 】</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>🎮 <strong class="text-slate-200">移動：</strong> WASD 或 搖桿</div>
+                    <div>🎯 <strong class="text-slate-200">瞄準：</strong> 滑動滑鼠 或 右螢幕</div>
+                    <div>💥 <strong class="text-slate-200">射擊：</strong> 滑鼠左鍵 或 射擊鍵</div>
+                    <div>🚀 <strong class="text-slate-200">跳躍：</strong> 空白鍵 或 跳躍鍵</div>
+                    <div>🔄 <strong class="text-slate-200">換彈：</strong> R 鍵</div>
+                    <div>🎒 <strong class="text-slate-200">切換武器：</strong> 1 ~ 4 鍵 / 武器欄</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 准星與擊中提示 -->
+    <div id="crosshair">
+        <div class="crosshair-line crosshair-h" style="left: -15px;"></div>
+        <div class="crosshair-line crosshair-h" style="right: -15px;"></div>
+        <div class="crosshair-line crosshair-v" style="top: -15px;"></div>
+        <div class="crosshair-line crosshair-v" style="bottom: -15px;"></div>
+        <div class="crosshair-dot"></div>
+    </div>
+    <div id="hitmarker">
+        <div class="hit-line hit-1"></div>
+        <div class="hit-line hit-2"></div>
+        <div class="hit-line hit-3"></div>
+        <div class="hit-line hit-4"></div>
+    </div>
+
+    <!-- 遊戲 HUD 界面 -->
+    <div class="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 md:p-6">
+        
+        <!-- 頂部資訊：戰局狀態、計分板、玩家戰績 -->
+        <div class="flex justify-between items-start w-full">
+            <!-- 玩家狀態 -->
+            <div class="bg-slate-900/80 border border-cyan-500/30 p-3 rounded-2xl flex items-center space-x-4 pointer-events-auto backdrop-blur-md">
+                <div class="flex flex-col">
+                    <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider">戰士</span>
+                    <span class="text-lg font-black text-white">Player (你)</span>
+                </div>
+                <div class="h-8 w-[1px] bg-slate-700"></div>
+                <div class="text-center">
+                    <div class="text-xs text-yellow-400 font-bold uppercase">擊殺 / 死亡</div>
+                    <div id="player-score" class="text-xl font-black text-white">0 / 0</div>
+                </div>
+            </div>
+
+            <!-- 計時器與比分排行 -->
+            <div class="flex flex-col items-center bg-slate-900/80 border border-pink-500/30 px-6 py-2 rounded-2xl backdrop-blur-md">
+                <span class="text-xs text-pink-400 font-bold uppercase tracking-widest">殺敵排行榜</span>
+                <div id="mini-leaderboard" class="text-sm font-bold text-slate-200 mt-1 flex flex-col items-center space-y-0.5">
+                    <!-- 動態渲染前三名 -->
+                    <div>1. Player: 0</div>
+                </div>
+            </div>
+
+            <!-- 連殺特效提示區 -->
+            <div id="streak-banner" class="opacity-0 transition-all duration-300 transform -translate-y-4 bg-yellow-500/20 border border-yellow-400/50 px-4 py-1.5 rounded-full text-yellow-400 font-black tracking-widest text-sm uppercase">
+                DOUBLE KILL! 🔥
+            </div>
+        </div>
+
+        <!-- 底部資訊：生命值、武器狀態、武器欄、行動控制 -->
+        <div class="flex flex-col space-y-4 w-full">
+            
+            <!-- 武器快速切換欄 (點擊即可切換) -->
+            <div class="flex justify-center space-x-2 pointer-events-auto">
+                <button id="btn-wpn-0" onclick="selectWeapon(0)" class="px-4 py-2 bg-slate-900/90 border-2 border-cyan-500 rounded-xl text-xs font-bold text-cyan-400 shadow-md transform hover:scale-105 transition">1: 手槍</button>
+                <button id="btn-wpn-1" onclick="selectWeapon(1)" class="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs font-bold text-slate-400 shadow-md transform hover:scale-105 transition">2: 步槍</button>
+                <button id="btn-wpn-2" onclick="selectWeapon(2)" class="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs font-bold text-slate-400 shadow-md transform hover:scale-105 transition">3: 散彈槍</button>
+                <button id="btn-wpn-3" onclick="selectWeapon(3)" class="px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs font-bold text-slate-400 shadow-md transform hover:scale-105 transition">4: 狙擊槍</button>
+            </div>
+
+            <div class="flex justify-between items-end w-full">
+                <!-- 生命值 -->
+                <div class="flex flex-col bg-slate-900/85 border border-cyan-500/20 p-4 rounded-3xl w-60 backdrop-blur-md">
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-sm font-bold text-cyan-400 flex items-center">💚 HP</span>
+                        <span id="hp-value" class="text-xl font-black text-white">100</span>
+                    </div>
+                    <div class="w-full bg-slate-800 h-3 rounded-full overflow-hidden border border-slate-700">
+                        <div id="hp-bar" class="bg-gradient-to-r from-cyan-400 to-cyan-500 h-full w-full transition-all duration-100 shadow-[0_0_8px_rgba(0,243,255,0.6)]"></div>
+                    </div>
+                </div>
+
+                <!-- 彈藥量 -->
+                <div class="flex flex-col items-end bg-slate-900/85 border border-pink-500/20 p-4 rounded-3xl w-48 backdrop-blur-md">
+                    <span class="text-xs text-pink-400 font-bold uppercase tracking-widest mb-1">AMMO</span>
+                    <div class="flex items-baseline space-x-1">
+                        <span id="ammo-clip" class="text-4xl font-black text-white">12</span>
+                        <span class="text-xl font-bold text-slate-400">/</span>
+                        <span id="ammo-reserve" class="text-xl font-bold text-slate-400">∞</span>
+                    </div>
+                    <div id="weapon-name" class="text-xs font-black text-pink-500 uppercase tracking-widest mt-1">CLASSIC PISTOL</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 行動端虛擬搖桿 (左側移動) -->
+    <div id="joystick-move" class="joystick-container">
+        <div id="joystick-knob-move" class="joystick-knob"></div>
+    </div>
+
+    <!-- 行動端右側快捷射擊/跳躍面板 -->
+    <div id="mobile-action-panel" class="absolute bottom-10 right-10 flex flex-col space-y-4 pointer-events-auto z-40 hidden">
+        <button id="btn-mobile-jump" class="w-16 h-16 bg-slate-800/80 active:bg-cyan-500 border border-slate-600 rounded-full flex items-center justify-center font-bold text-white text-lg shadow-lg">
+            JUMP
+        </button>
+        <button id="btn-mobile-shoot" class="w-20 h-20 bg-pink-600/90 active:bg-pink-500 border-2 border-pink-400 rounded-full flex items-center justify-center font-black text-white text-xl shadow-[0_0_20px_rgba(255,0,127,0.5)]">
+            FIRE
+        </button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 遊戲核心變數與配置
+        // ==========================================
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'roblox-rivals-v2';
+        
+        let scene, camera, renderer;
+        let playButton = document.getElementById('play-button');
+        let blocker = document.getElementById('blocker');
+
+        // 玩家狀態
+        let player = {
+            hp: 100,
+            maxHp: 100,
+            kills: 0,
+            deaths: 0,
+            speed: 0.15,
+            jumpStrength: 0.28,
+            vel: new THREE.Vector3(),
+            pos: new THREE.Vector3(0, 0, 0),
+            onGround: true,
+            radius: 1.5,
+            height: 3,
+            isDead: false,
+            invulnerable: false
+        };
+
+        // 武器庫配置
+        const WEAPONS = [
+            { name: 'Classic Pistol', dmg: 18, fireRate: 350, maxAmmo: 12, range: 60, spread: 0.02, color: 0x00f3ff, recoil: 0.05, zoom: 45, soundType: 'pistol' },
+            { name: 'Tactical Rifle', dmg: 22, fireRate: 110, maxAmmo: 30, range: 100, spread: 0.05, color: 0xff007f, recoil: 0.08, zoom: 40, soundType: 'rifle' },
+            { name: 'Neon Shotgun', dmg: 14, fireRate: 850, maxAmmo: 6, range: 25, spread: 0.15, pellets: 7, color: 0xfffb00, recoil: 0.22, zoom: 48, soundType: 'shotgun' },
+            { name: 'Helix Sniper', dmg: 85, fireRate: 1500, maxAmmo: 5, range: 200, spread: 0.001, color: 0x39ff14, recoil: 0.35, zoom: 20, soundType: 'sniper' }
+        ];
+        let currentWeaponIdx = 0;
+        let ammoClips = [12, 30, 6, 5];
+        let isReloading = false;
+        let lastShootTime = 0;
+
+        // 競技場與物件庫
+        let obstacles = [];
+        let bots = [];
+        let particles = [];
+        let bulletTrails = [];
+        let items = []; // 補包等
+        
+        // 鍵盤與輸入狀態
+        const keys = {};
+        let isPointerLocked = false;
+        let mouseX = 0, mouseY = 0;
+        const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+        let isMobile = false;
+
+        // 行動端操控
+        let touchStartPos = null;
+        let touchMovePos = null;
+        let moveJoystickActive = false;
+        let moveDir = new THREE.Vector2();
+        let touchLookId = null;
+        let lastTouchLookPos = { x: 0, y: 0 };
+
+        // ==========================================
+        // 2. 原生音效合成器 (Web Audio API)
+        // ==========================================
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+            }
+        }
+
+        function playSynthSound(type) {
+            if (!audioCtx) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'pistol') {
+                    // 手槍高頻射擊聲
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } else if (type === 'rifle') {
+                    // 突擊步槍
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'shotgun') {
+                    // 散彈槍爆裂聲
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'sniper') {
+                    // 狙擊槍低沉巨響
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'hit') {
+                    // 命中回饋音 (清脆叮一聲)
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(1200, now);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'hurt') {
+                    // 受傷音效 (低頻受挫)
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(70, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'ko') {
+                    // 擊殺音效
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(600, now);
+                    osc.frequency.setValueAtTime(900, now + 0.08);
+                    osc.frequency.setValueAtTime(1200, now + 0.16);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'jump') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.exponentialRampToValueAtTime(350, now + 0.15);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                }
+            } catch (e) {
+                console.warn('Audio error:', e);
+            }
+        }
+
+        // ==========================================
+        // 3. 行動端與瀏覽器相容性偵測
+        // ==========================================
+        function detectDevice() {
+            isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+            if (isMobile) {
+                document.getElementById('joystick-move').style.display = 'block';
+                document.getElementById('mobile-action-panel').classList.remove('hidden');
+                document.getElementById('play-button').innerText = "啟動觸控競技 (PLAY)";
+            }
+        }
+
+        // ==========================================
+        // 4. 初始化 Three.js 炫彩場景
+        // ==========================================
+        function init() {
+            detectDevice();
+
+            // 創建場景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0c14); // 暗黑霓虹基底
+            scene.fog = new THREE.FogExp2(0x0a0c14, 0.015);
+
+            // 攝影機
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.8, 0); // 初始頭部高度
+
+            // 渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // 建立光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // 頂部炫彩平行光 (產生卡通陰影)
+            const dirLight = new THREE.DirectionalLight(0x00f3ff, 0.8);
+            dirLight.position.set(20, 40, 20);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 1024;
+            dirLight.shadow.mapSize.height = 1024;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 150;
+            const d = 50;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // 紫粉色點綴氛圍光
+            const pointLight = new THREE.PointLight(0xff007f, 1.5, 100);
+            pointLight.position.set(0, 15, 0);
+            scene.add(pointLight);
+
+            // 建立大地地板 (極簡卡通格線)
+            createArenaFloor();
+
+            // 建立競技場建築與掩體
+            buildArenaStructures();
+
+            // 放置隨機重生點武器或補血包
+            spawnItems();
+
+            // 初始化 AI 機器人
+            spawnBots(4);
+
+            // 監聽器註冊
+            window.addEventListener('resize', onWindowResize);
+            setupInputListeners();
+
+            // 首次 UI 渲染更新
+            updateAmmoUI();
+            updateHpUI();
+            updateLeaderboardUI();
+        }
+
+        // ==========================================
+        // 5. 構建 3D 炫彩地圖
+        // ==========================================
+        function createArenaFloor() {
+            // 大地幾何體
+            const size = 150;
+            const floorGeo = new THREE.PlaneGeometry(size, size, 40, 40);
+            
+            // 使用卡通發光描邊效果的材質
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x111625,
+                roughness: 0.8,
+                metalness: 0.2,
+                flatShading: true
+            });
+            
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // 地板霓虹格線
+            const gridHelper = new THREE.GridHelper(size, 40, 0x00f3ff, 0xff007f);
+            gridHelper.position.y = 0.02;
+            scene.add(gridHelper);
+
+            // 圍牆 (防止玩家掉出地圖)
+            const wallGeo = new THREE.BoxGeometry(size, 20, 2);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0f111a, roughness: 0.9 });
+
+            const walls = [
+                { pos: [0, 10, -size/2], rot: [0, 0, 0] },
+                { pos: [0, 10, size/2], rot: [0, 0, 0] },
+                { pos: [-size/2, 10, 0], rot: [0, Math.PI/2, 0] },
+                { pos: [size/2, 10, 0], rot: [0, Math.PI/2, 0] }
+            ];
+
+            walls.forEach(w => {
+                const wall = new THREE.Mesh(wallGeo, wallMat);
+                wall.position.set(...w.pos);
+                wall.rotation.set(...w.rot);
+                wall.castShadow = true;
+                wall.receiveShadow = true;
+                scene.add(wall);
+                obstacles.push(wall);
+            });
+        }
+
+        function buildArenaStructures() {
+            // 隨機放置積木狀卡通建築、貨櫃、大柱子
+            const colors = [0x00f3ff, 0xff007f, 0xfffb00, 0x39ff14];
+            
+            const layouts = [
+                // 中央巨塔
+                { size: [15, 30, 15], pos: [0, 15, 0], col: 0x0f111a, glow: 0xff007f },
+                // 周圍對稱高台
+                { size: [8, 12, 8], pos: [25, 6, 25], col: 0x1a2238, glow: 0x00f3ff },
+                { size: [8, 12, 8], pos: [-25, 6, -25], col: 0x1a2238, glow: 0x00f3ff },
+                { size: [8, 12, 8], pos: [-25, 6, 25], col: 0x1a2238, glow: 0x00f3ff },
+                { size: [8, 12, 8], pos: [25, 6, -25], col: 0x1a2238, glow: 0x00f3ff },
+                // 矮牆與散落箱子
+                { size: [12, 4, 3], pos: [0, 2, 30], col: 0x222a45, glow: 0xfffb00 },
+                { size: [12, 4, 3], pos: [0, 2, -30], col: 0x222a45, glow: 0xfffb00 },
+                { size: [3, 4, 12], pos: [30, 2, 0], col: 0x222a45, glow: 0xfffb00 },
+                { size: [3, 4, 12], pos: [-30, 2, 0], col: 0x222a45, glow: 0xfffb00 },
+                // 零散角落
+                { size: [4, 4, 4], pos: [12, 2, 12], col: 0xff007f, glow: 0xff007f },
+                { size: [4, 4, 4], pos: [-12, 2, 12], col: 0x00f3ff, glow: 0x00f3ff },
+                { size: [4, 4, 4], pos: [12, 2, -12], col: 0x39ff14, glow: 0x39ff14 },
+                { size: [4, 4, 4], pos: [-12, 2, -12], col: 0xfffb00, glow: 0xfffb00 }
+            ];
+
+            layouts.forEach((lay, idx) => {
+                const boxGeo = new THREE.BoxGeometry(...lay.size);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: lay.col,
+                    roughness: 0.5,
+                    metalness: 0.3,
+                    flatShading: true
+                });
+                const mesh = new THREE.Mesh(boxGeo, mat);
+                mesh.position.set(...lay.pos);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+                obstacles.push(mesh);
+
+                // 添加卡通霓虹發光燈條 (線條)
+                const edges = new THREE.EdgesGeometry(boxGeo);
+                const lineMat = new THREE.LineBasicMaterial({ color: lay.glow, linewidth: 2 });
+                const line = new THREE.LineSegments(edges, lineMat);
+                line.position.copy(mesh.position);
+                scene.add(line);
+            });
+        }
+
+        // ==========================================
+        // 6. 補包與道具系統
+        // ==========================================
+        function spawnItems() {
+            // 每隔一段時間隨機生成一些「愛心補包」與「威力彈藥包」
+            const positions = [
+                new THREE.Vector3(15, 1, 0),
+                new THREE.Vector3(-15, 1, 0),
+                new THREE.Vector3(0, 1, 15),
+                new THREE.Vector3(0, 1, -15),
+                new THREE.Vector3(35, 1, 35),
+                new THREE.Vector3(-35, 1, -35)
+            ];
+
+            positions.forEach((pos, i) => {
+                createHealItem(pos);
+            });
+        }
+
+        function createHealItem(pos) {
+            // 卡通綠十字補包
+            const group = new THREE.Group();
+            group.position.copy(pos);
+
+            const baseGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.3 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            group.add(base);
+
+            // 綠十字
+            const crossHGeo = new THREE.BoxGeometry(1.0, 0.3, 0.3);
+            const crossVGeo = new THREE.BoxGeometry(0.3, 1.0, 0.3);
+            const crossMat = new THREE.MeshStandardMaterial({ color: 0x39ff14, emissive: 0x39ff14 });
+            const crossH = new THREE.Mesh(crossHGeo, crossMat);
+            const crossV = new THREE.Mesh(crossVGeo, crossMat);
+            crossH.position.z = 0.61;
+            crossV.position.z = 0.61;
+            group.add(crossH, crossV);
+
+            scene.add(group);
+            items.push({
+                mesh: group,
+                type: 'heal',
+                value: 40,
+                radius: 1.5,
+                rotSpeed: 0.02 + Math.random() * 0.02
+            });
+        }
+
+        // ==========================================
+        // 7. 智慧 AI 機器人 (Bot System)
+        // ==========================================
+        const BOT_NAMES = ["RivalPro", "N00B_Hunter", "BuildMaster", "Ninja_X", "GamerGod", "RoboCop"];
+        
+        function spawnBots(count) {
+            for (let i = 0; i < count; i++) {
+                createBot(i);
+            }
+        }
+
+        function createBot(idx) {
+            const botGroup = new THREE.Group();
+            
+            // 機器人外觀 - Roblox 風格方塊人
+            // 頭部
+            const headGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xffd1a4, roughness: 0.5 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.4;
+            botGroup.add(head);
+
+            // 身體 (鮮艷霓虹襯衫)
+            const bodyGeo = new THREE.BoxGeometry(1.8, 2.0, 1.0);
+            const botColors = [0xff007f, 0x00f3ff, 0xfffb00, 0xa855f7];
+            const bodyMat = new THREE.MeshStandardMaterial({ 
+                color: botColors[idx % botColors.length], 
+                roughness: 0.4 
+            });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = -0.2;
+            botGroup.add(body);
+
+            // 手部 (左/右)
+            const limbGeo = new THREE.BoxGeometry(0.5, 2.0, 0.5);
+            const limbMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+            const leftArm = new THREE.Mesh(limbGeo, limbMat);
+            leftArm.position.set(-1.25, -0.2, 0);
+            const rightArm = new THREE.Mesh(limbGeo, limbMat);
+            rightArm.position.set(1.25, -0.2, 0);
+            botGroup.add(leftArm, rightArm);
+
+            // 腿部
+            const leftLeg = new THREE.Mesh(limbGeo, limbMat);
+            leftLeg.position.set(-0.55, -2.0, 0);
+            const rightLeg = new THREE.Mesh(limbGeo, limbMat);
+            rightLeg.position.set(0.55, -2.0, 0);
+            botGroup.add(leftLeg, rightLeg);
+
+            // 隨機起點 (避免擠在一起)
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 30 + Math.random() * 30;
+            botGroup.position.set(Math.cos(angle) * dist, 4, Math.sin(angle) * dist);
+
+            botGroup.castShadow = true;
+            scene.add(botGroup);
+
+            // 機器人物理與行為狀態
+            const botData = {
+                mesh: botGroup,
+                name: BOT_NAMES[idx % BOT_NAMES.length],
+                hp: 100,
+                maxHp: 100,
+                kills: 0,
+                deaths: 0,
+                speed: 0.08 + Math.random() * 0.05,
+                vel: new THREE.Vector3(),
+                radius: 1.6,
+                state: 'patrol', // 'patrol', 'chase', 'flee'
+                targetPos: new THREE.Vector3(),
+                lastShootTime: 0,
+                shootCooldown: 800 + Math.random() * 800,
+                yaw: Math.random() * Math.PI * 2,
+                onGround: true,
+                changeStateTime: 0
+            };
+
+            bots.push(botData);
+            updateLeaderboardUI();
+        }
+
+        function respawnBot(bot) {
+            bot.hp = 100;
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 25 + Math.random() * 35;
+            bot.mesh.position.set(Math.cos(angle) * dist, 10, Math.sin(angle) * dist);
+            bot.vel.set(0, 0, 0);
+            bot.state = 'patrol';
+        }
+
+        // ==========================================
+        // 8. 輸入控制器與滑鼠鎖定 (Desktop & Mobile)
+        // ==========================================
+        function setupInputListeners() {
+            // 桌面端滑鼠鎖定
+            playButton.addEventListener('click', () => {
+                initAudio();
+                if (!isMobile) {
+                    document.body.requestPointerLock();
+                } else {
+                    blocker.style.display = 'none';
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === document.body) {
+                    blocker.style.display = 'none';
+                    isPointerLocked = true;
+                } else {
+                    blocker.style.display = 'flex';
+                    isPointerLocked = false;
+                }
+            });
+
+            // 鍵盤監聽
+            window.addEventListener('keydown', (e) => {
+                keys[e.code] = true;
+
+                // 換武器
+                if (e.code === 'Digit1') selectWeapon(0);
+                if (e.code === 'Digit2') selectWeapon(1);
+                if (e.code === 'Digit3') selectWeapon(2);
+                if (e.code === 'Digit4') selectWeapon(3);
+
+                // 換彈
+                if (e.code === 'KeyR') reloadWeapon();
+
+                // 跳躍
+                if (e.code === 'Space' && player.onGround && !player.isDead) {
+                    player.vel.y = player.jumpStrength;
+                    player.onGround = false;
+                    playSynthSound('jump');
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.code] = false;
+            });
+
+            // 桌面端視角移動
+            document.addEventListener('mousemove', (e) => {
+                if (!isPointerLocked && !isMobile) return;
+                
+                const sensitivity = 0.002;
+                euler.y -= e.movementX * sensitivity;
+                euler.x -= e.movementY * sensitivity;
+
+                // 限制上下看視角
+                euler.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, euler.x));
+                camera.quaternion.setFromEuler(euler);
+            });
+
+            // 射擊監聽 (桌面)
+            window.addEventListener('mousedown', (e) => {
+                if (isPointerLocked && e.button === 0) {
+                    fireActiveWeapon();
+                }
+            });
+
+            // --- 行動端搖桿與手勢邏輯 ---
+            const joyMove = document.getElementById('joystick-move');
+            const knobMove = document.getElementById('joystick-knob-move');
+
+            joyMove.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                const rect = joyMove.getBoundingClientRect();
+                touchStartPos = {
+                    x: touch.clientX,
+                    y: touch.clientY,
+                    cx: rect.left + rect.width / 2,
+                    cy: rect.top + rect.height / 2
+                };
+                moveJoystickActive = true;
+            }, { passive: true });
+
+            joyMove.addEventListener('touchmove', (e) => {
+                if (!moveJoystickActive) return;
+                const touch = e.touches[0];
+                const dx = touch.clientX - touchStartPos.cx;
+                const dy = touch.clientY - touchStartPos.cy;
+                const dist = Math.min(Math.sqrt(dx * dx + dy * dy), 45); // 限制移動半徑
+                const angle = Math.atan2(dy, dx);
+
+                const knobX = Math.cos(angle) * dist;
+                const knobY = Math.sin(angle) * dist;
+
+                knobMove.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+                // 設定移動向量
+                moveDir.set(Math.cos(angle) * (dist / 45), -Math.sin(angle) * (dist / 45));
+            }, { passive: true });
+
+            const resetJoystick = () => {
+                moveJoystickActive = false;
+                knobMove.style.transform = `translate(0px, 0px)`;
+                moveDir.set(0, 0);
+            };
+
+            joyMove.addEventListener('touchend', resetJoystick);
+            joyMove.addEventListener('touchcancel', resetJoystick);
+
+            // 右側滑動控制視角 (適用於非搖桿/按鈕的所有屏幕區域)
+            window.addEventListener('touchstart', (e) => {
+                if (!isMobile) return;
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    // 如果觸摸發生在右半邊螢幕，且沒有觸及搖桿或按鈕
+                    if (touch.clientX > window.innerWidth / 2 && !touchLookId) {
+                        const target = touch.target;
+                        if (target.id === 'btn-mobile-shoot' || target.id === 'btn-mobile-jump' || target.id.startsWith('btn-wpn')) {
+                            continue;
+                        }
+                        touchLookId = touch.identifier;
+                        lastTouchLookPos = { x: touch.clientX, y: touch.clientY };
+                        break;
+                    }
+                }
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isMobile || touchLookId === null) return;
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (touch.identifier === touchLookId) {
+                        const dx = touch.clientX - lastTouchLookPos.x;
+                        const dy = touch.clientY - lastTouchLookPos.y;
+
+                        const sens = 0.005;
+                        euler.y -= dx * sens;
+                        euler.x -= dy * sens;
+                        euler.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, euler.x));
+                        camera.quaternion.setFromEuler(euler);
+
+                        lastTouchLookPos = { x: touch.clientX, y: touch.clientY };
+                        break;
+                    }
+                }
+            }, { passive: true });
+
+            const stopLook = (e) => {
+                if (touchLookId === null) return;
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    if (e.changedTouches[i].identifier === touchLookId) {
+                        touchLookId = null;
+                        break;
+                    }
+                }
+            };
+            window.addEventListener('touchend', stopLook);
+            window.addEventListener('touchcancel', stopLook);
+
+            // 行動端按鈕綁定
+            document.getElementById('btn-mobile-jump').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (player.onGround && !player.isDead) {
+                    player.vel.y = player.jumpStrength;
+                    player.onGround = false;
+                    playSynthSound('jump');
+                }
+            });
+
+            document.getElementById('btn-mobile-shoot').addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                fireActiveWeapon();
+            });
+        }
+
+        // ==========================================
+        // 9. 戰鬥系統 (射擊、後座力、傷害判定)
+        // ==========================================
+        function selectWeapon(idx) {
+            if (isReloading) return;
+            currentWeaponIdx = idx;
+            // 高亮當前按鈕樣式
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`btn-wpn-${i}`);
+                if (i === idx) {
+                    btn.className = "px-4 py-2 bg-slate-900/90 border-2 border-cyan-500 rounded-xl text-xs font-bold text-cyan-400 shadow-md transform scale-105 transition pointer-events-auto";
+                } else {
+                    btn.className = "px-4 py-2 bg-slate-900/60 border border-slate-700 rounded-xl text-xs font-bold text-slate-400 shadow-md transform hover:scale-105 transition pointer-events-auto";
+                }
+            }
+            updateAmmoUI();
+            playSynthSound('jump'); // 微弱反饋音
+        }
+
+        function reloadWeapon() {
+            if (isReloading || ammoClips[currentWeaponIdx] === WEAPONS[currentWeaponIdx].maxAmmo) return;
+            isReloading = true;
+            document.getElementById('weapon-name').innerText = "RELOADING...";
+            setTimeout(() => {
+                ammoClips[currentWeaponIdx] = WEAPONS[currentWeaponIdx].maxAmmo;
+                isReloading = false;
+                updateAmmoUI();
+            }, 1200);
+        }
+
+        function fireActiveWeapon() {
+            if (player.isDead || isReloading) return;
+            
+            const now = Date.now();
+            const wpn = WEAPONS[currentWeaponIdx];
+
+            if (now - lastShootTime < wpn.fireRate) return;
+            if (ammoClips[currentWeaponIdx] <= 0) {
+                reloadWeapon();
+                return;
+            }
+
+            // 扣除子彈
+            ammoClips[currentWeaponIdx]--;
+            lastShootTime = now;
+            updateAmmoUI();
+
+            // 播放合成槍聲
+            playSynthSound(wpn.soundType);
+
+            // 後座力相機震動
+            camera.rotation.x += wpn.recoil * 0.5;
+            setTimeout(() => {
+                camera.rotation.x -= wpn.recoil * 0.5;
+            }, 50);
+
+            // 發射子彈判定 (支援散彈槍多重彈丸)
+            const pellets = wpn.pellets || 1;
+            for (let p = 0; p < pellets; p++) {
+                shootRaycast(wpn);
+            }
+        }
+
+        function shootRaycast(wpn) {
+            // 從相機朝前方發射射線
+            const raycaster = new THREE.Raycaster();
+            
+            // 彈道偏移 (Spread)
+            const spreadX = (Math.random() - 0.5) * wpn.spread;
+            const spreadY = (Math.random() - 0.5) * wpn.spread;
+            
+            const direction = new THREE.Vector3(spreadX, spreadY, -1);
+            direction.applyQuaternion(camera.quaternion);
+            direction.normalize();
+
+            raycaster.set(camera.position, direction);
+
+            // 包裝所有可能擊中的碰撞體
+            const targetMeshes = [];
+            const meshToBotMap = new Map();
+
+            bots.forEach(b => {
+                b.mesh.traverse(child => {
+                    if (child.isMesh) {
+                        targetMeshes.push(child);
+                        meshToBotMap.set(child, b);
+                    }
+                });
+            });
+
+            // 同時檢測牆壁與障礙物防止穿牆打人
+            const obstacleMeshes = [];
+            obstacles.forEach(o => {
+                if (o.isMesh) obstacleMeshes.push(o);
+            });
+
+            const allTargets = [...targetMeshes, ...obstacleMeshes];
+            const intersects = raycaster.intersectObjects(allTargets);
+
+            let hitPoint = camera.position.clone().add(direction.clone().multiplyScalar(wpn.range));
+
+            if (intersects.length > 0) {
+                const hit = intersects[0];
+                if (hit.distance <= wpn.range) {
+                    hitPoint = hit.point;
+
+                    // 檢查是否是機器人
+                    const hitBot = meshToBotMap.get(hit.object);
+                    if (hitBot && hitBot.hp > 0) {
+                        // 判定是否是頭部
+                        const isHead = hit.object.geometry.type === 'BoxGeometry' && hit.object.position.y > 1; 
+                        const finalDmg = isHead ? wpn.dmg * 2 : wpn.dmg;
+
+                        damageBot(hitBot, finalDmg, isHead);
+                        showHitmarker();
+                        playSynthSound('hit');
+                    }
+
+                    // 產生卡通撞擊粒子
+                    createImpactParticles(hit.point, hit.face.normal, wpn.color);
+                }
+            }
+
+            // 繪製霓虹子彈軌跡
+            createBulletTrail(camera.position.clone().add(new THREE.Vector3(0, -0.3, 0)), hitPoint, wpn.color);
+        }
+
+        function damageBot(bot, damage, isHead) {
+            if (bot.hp <= 0) return;
+            bot.hp = Math.max(0, bot.hp - damage);
+            
+            // 隨機彈出受傷數字或受擊效果
+            createDamageNumber(bot.mesh.position.clone().add(new THREE.Vector3(0, 2, 0)), damage, isHead);
+
+            if (bot.hp <= 0) {
+                player.kills++;
+                playSynthSound('ko');
+                showKoOverlay(isHead ? "HEADSHOT K.O.!" : "KILLED RIVAL!");
+                updateLeaderboardUI();
+                respawnBot(bot);
+            }
+        }
+
+        function takeDamage(amount) {
+            if (player.isDead || player.invulnerable) return;
+
+            player.hp = Math.max(0, player.hp - amount);
+            updateHpUI();
+            playSynthSound('hurt');
+
+            // 螢幕受傷泛紅
+            const flash = document.getElementById('damage-flash');
+            flash.style.boxShadow = "inset 0 0 40px 10px rgba(255, 0, 127, 0.8)";
+            setTimeout(() => {
+                flash.style.boxShadow = "inset 0 0 0px 0px rgba(255, 0, 127, 0)";
+            }, 150);
+
+            if (player.hp <= 0) {
+                player.isDead = true;
+                player.deaths++;
+                updateLeaderboardUI();
+                showKoOverlay("YOU ELIMINATED!", true);
+                
+                // 3秒後重生
+                setTimeout(() => {
+                    respawnPlayer();
+                }, 3000);
+            }
+        }
+
+        function respawnPlayer() {
+            player.hp = 100;
+            player.isDead = false;
+            player.invulnerable = true;
+            camera.position.set(0, 1.8, 0);
+            euler.set(0, 0, 0);
+            camera.quaternion.setFromEuler(euler);
+            updateHpUI();
+
+            // 無敵閃爍
+            setTimeout(() => { player.invulnerable = false; }, 2000);
+        }
+
+        // ==========================================
+        // 10. 卡通粒子與視覺特效 (VFX)
+        // ==========================================
+        function createBulletTrail(start, end, color) {
+            const material = new THREE.LineBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 1,
+                linewidth: 3
+            });
+            const points = [start, end];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(geometry, material);
+            scene.add(line);
+
+            bulletTrails.push({
+                mesh: line,
+                life: 1.0,
+                decay: 0.12
+            });
+        }
+
+        function createImpactParticles(pos, normal, color) {
+            const count = 8;
+            const geo = new THREE.BoxGeometry(0.15, 0.15, 0.15);
+            const mat = new THREE.MeshBasicMaterial({ color: color });
+
+            for (let i = 0; i < count; i++) {
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.copy(pos);
+                scene.add(mesh);
+
+                const velocity = normal.clone()
+                    .add(new THREE.Vector3((Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5, (Math.random() - 0.5) * 1.5))
+                    .normalize()
+                    .multiplyScalar(0.1 + Math.random() * 0.15);
+
+                particles.push({
+                    mesh: mesh,
+                    vel: velocity,
+                    life: 1.0,
+                    decay: 0.05 + Math.random() * 0.05
+                });
+            }
+        }
+
+        function createDamageNumber(pos, text, isHead) {
+            // 在 3D 場景中彈出一個動態飄浮的 2D 霓虹數字
+            const canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = isHead ? '#ff007f' : '#fffb00';
+            ctx.font = 'bold 36px Impact, Arial Black';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 64, 40);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const mat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(mat);
+            sprite.position.copy(pos);
+            sprite.scale.set(3, 1.5, 1);
+            scene.add(sprite);
+
+            particles.push({
+                mesh: sprite,
+                vel: new THREE.Vector3((Math.random() - 0.5) * 0.02, 0.08, (Math.random() - 0.5) * 0.02),
+                life: 1.0,
+                decay: 0.04
+            });
+        }
+
+        function showHitmarker() {
+            const marker = document.getElementById('hitmarker');
+            marker.style.transform = "translate(-50%, -50%) scale(1.2)";
+            setTimeout(() => {
+                marker.style.transform = "translate(-50%, -50%) scale(0)";
+            }, 100);
+        }
+
+        function showKoOverlay(message, isDefeat = false) {
+            const overlay = document.getElementById('ko-overlay');
+            const mainText = document.getElementById('ko-text');
+            const subText = document.getElementById('ko-subtext');
+
+            mainText.innerText = isDefeat ? "WASTED" : "K.O.";
+            subText.innerText = message;
+
+            if (isDefeat) {
+                mainText.className = "text-6xl md:text-8xl font-black italic tracking-wider uppercase text-red-500 filter drop-shadow-[0_5px_15px_rgba(239,68,68,0.8)]";
+            } else {
+                mainText.className = "text-6xl md:text-8xl font-black italic tracking-wider uppercase text-yellow-300 filter drop-shadow-[0_5px_15px_rgba(234,179,8,0.8)]";
+            }
+
+            overlay.classList.remove('opacity-0');
+            overlay.classList.add('ko-anim');
+
+            setTimeout(() => {
+                overlay.classList.remove('ko-anim');
+                overlay.classList.add('opacity-0');
+            }, 1500);
+        }
+
+        // ==========================================
+        // 11. UI 渲染渲染與更新
+        // ==========================================
+        function updateAmmoUI() {
+            const currentWpn = WEAPONS[currentWeaponIdx];
+            document.getElementById('ammo-clip').innerText = ammoClips[currentWeaponIdx];
+            document.getElementById('weapon-name').innerText = currentWpn.name;
+        }
+
+        function updateHpUI() {
+            document.getElementById('hp-value').innerText = player.hp;
+            const pct = (player.hp / player.maxHp) * 100;
+            document.getElementById('hp-bar').style.width = `${pct}%`;
+        }
+
+        function updateLeaderboardUI() {
+            // 合併玩家與機器人數據
+            const rank = [
+                { name: "Player (你)", kills: player.kills },
+                ...bots.map(b => ({ name: b.name, kills: b.kills }))
+            ];
+
+            // 排序
+            rank.sort((a, b) => b.kills - a.kills);
+
+            // 更新左上角戰績
+            document.getElementById('player-score').innerText = `${player.kills} / ${player.deaths}`;
+
+            // 渲染前 3 排行榜
+            const listEl = document.getElementById('mini-leaderboard');
+            listEl.innerHTML = rank.slice(0, 3).map((u, i) => {
+                const colors = ['text-yellow-400', 'text-slate-300', 'text-amber-600'];
+                return `<div class="${colors[i] || 'text-slate-400'}">${i+1}. ${u.name}: ${u.kills} Kills</div>`;
+            }).join('');
+        }
+
+        // ==========================================
+        // 12. 遊戲主循環 (Gameplay Loop)
+        // ==========================================
+        function updatePhysics() {
+            if (player.isDead) return;
+
+            // 1. 玩家物理移動 (支援行動端)
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            forward.y = 0; right.y = 0; // 鎖定 Y 軸不飛天
+            forward.normalize(); right.normalize();
+
+            let moveX = 0, moveZ = 0;
+
+            if (isMobile) {
+                // 行動端利用搖桿向量
+                moveX = moveDir.x;
+                moveZ = -moveDir.y;
+            } else {
+                // 桌面端利用 WASD
+                if (keys['KeyW']) moveZ = 1;
+                if (keys['KeyS']) moveZ = -1;
+                if (keys['KeyA']) moveX = -1;
+                if (keys['KeyD']) moveX = 1;
+            }
+
+            const moveVec = new THREE.Vector3()
+                .addScaledVector(forward, moveZ)
+                .addScaledVector(right, moveX)
+                .normalize()
+                .multiplyScalar(player.speed);
+
+            // 應用重力與空中物理
+            player.vel.y -= 0.015; // 重力加速度
+            
+            // 地板碰撞阻擋
+            let targetY = camera.position.y + player.vel.y;
+            if (targetY <= 1.8) {
+                targetY = 1.8;
+                player.vel.y = 0;
+                player.onGround = true;
+            }
+
+            camera.position.add(moveVec);
+            camera.position.y = targetY;
+
+            // 玩家簡易障礙物碰撞
+            obstacles.forEach(obs => {
+                const pBox = new THREE.Box3(
+                    camera.position.clone().add(new THREE.Vector3(-1.2, -1.8, -1.2)),
+                    camera.position.clone().add(new THREE.Vector3(1.2, 1.2, 1.2))
+                );
+                const obsBox = new THREE.Box3().setFromObject(obs);
+                if (pBox.intersectsBox(obsBox)) {
+                    // 碰牆反彈回拉 (極簡物理推回)
+                    const pushBack = camera.position.clone().sub(obs.position).normalize().multiplyScalar(0.15);
+                    pushBack.y = 0;
+                    camera.position.add(pushBack);
+                }
+            });
+
+            // 補血道具拾取判定
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                // 旋轉道具
+                item.mesh.rotation.y += item.rotSpeed;
+                const dist = camera.position.distanceTo(item.mesh.position);
+                if (dist < player.radius + item.radius) {
+                    if (item.type === 'heal' && player.hp < player.maxHp) {
+                        player.hp = Math.min(player.maxHp, player.hp + item.value);
+                        updateHpUI();
+                        playSynthSound('hit'); // 拾取清脆反饋
+
+                        // 移除場景物件
+                        scene.remove(item.mesh);
+                        items.splice(i, 1);
+                        
+                        // 15 秒後自動再次生成補包
+                        const oldPos = item.mesh.position.clone();
+                        setTimeout(() => {
+                            createHealItem(oldPos);
+                        }, 15000);
+                    }
+                }
+            }
+        }
+
+        function updateBots() {
+            const now = Date.now();
+            bots.forEach(bot => {
+                if (bot.hp <= 0) return;
+
+                const botPos = bot.mesh.position;
+                const distToPlayer = botPos.distanceTo(camera.position);
+
+                // --- 1. AI 決策決策樹 ---
+                if (now - bot.changeStateTime > 3000) {
+                    bot.changeStateTime = now;
+                    if (distToPlayer < 40) {
+                        bot.state = Math.random() < 0.7 ? 'chase' : 'patrol';
+                    } else {
+                        bot.state = 'patrol';
+                    }
+                }
+
+                // --- 2. 行動與尋路邏輯 ---
+                let moveTarget = new THREE.Vector3();
+                if (bot.state === 'chase' && !player.isDead) {
+                    moveTarget.copy(camera.position);
+                } else {
+                    // 隨機巡邏點
+                    if (botPos.distanceTo(bot.targetPos) < 4 || bot.targetPos.length() === 0) {
+                        const rAngle = Math.random() * Math.PI * 2;
+                        const rDist = 20 + Math.random() * 20;
+                        bot.targetPos.set(Math.cos(rAngle) * rDist, botPos.y, Math.sin(rAngle) * rDist);
+                    }
+                    moveTarget.copy(bot.targetPos);
+                }
+
+                // 朝向目標移動
+                const dir = moveTarget.clone().sub(botPos);
+                dir.y = 0;
+                dir.normalize();
+                
+                // 行動旋轉
+                const targetRotation = Math.atan2(dir.x, dir.z);
+                bot.mesh.rotation.y += (targetRotation - bot.mesh.rotation.y) * 0.1;
+
+                // 移動並處理障礙物碰撞
+                botPos.addScaledVector(dir, bot.speed);
+
+                // 偶爾跳躍增加卡通動感
+                if (Math.random() < 0.005 && bot.onGround) {
+                    bot.vel.y = 0.22;
+                    bot.onGround = false;
+                }
+
+                // 重力
+                bot.vel.y -= 0.015;
+                botPos.y += bot.vel.y;
+                if (botPos.y <= 2.2) {
+                    botPos.y = 2.2;
+                    bot.vel.y = 0;
+                    bot.onGround = true;
+                }
+
+                // 防止機器人卡牆
+                obstacles.forEach(obs => {
+                    const bBox = new THREE.Box3().setFromObject(bot.mesh);
+                    const obsBox = new THREE.Box3().setFromObject(obs);
+                    if (bBox.intersectsBox(obsBox)) {
+                        const push = botPos.clone().sub(obs.position).normalize().multiplyScalar(0.12);
+                        push.y = 0;
+                        botPos.add(push);
+                    }
+                });
+
+                // --- 3. 攻擊玩家邏輯 ---
+                if (distToPlayer < 35 && !player.isDead && !player.invulnerable) {
+                    if (now - bot.lastShootTime > bot.shootCooldown) {
+                        bot.lastShootTime = now;
+                        // 模擬一定機率射偏，給予玩家反應機會
+                        const hitChance = distToPlayer < 12 ? 0.45 : 0.22;
+                        if (Math.random() < hitChance) {
+                            takeDamage(12);
+                            // 繪製擊中玩家子彈軌跡
+                            createBulletTrail(botPos.clone().add(new THREE.Vector3(0, 1.2, 0)), camera.position.clone().add(new THREE.Vector3(0, -0.5, 0)), 0xff0055);
+                        } else {
+                            // 沒擊中玩家的空槍軌跡
+                            const missPos = camera.position.clone().add(new THREE.Vector3(
+                                (Math.random() - 0.5) * 8,
+                                (Math.random() - 0.5) * 8,
+                                (Math.random() - 0.5) * 8
+                            ));
+                            createBulletTrail(botPos.clone().add(new THREE.Vector3(0, 1.2, 0)), missPos, 0xffaa00);
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateVFX() {
+            // 更新粒子
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.mesh.position.add(p.vel);
+                p.life -= p.decay;
+                
+                if (p.mesh.isSprite) {
+                    // 受傷文字向上飄移
+                    p.mesh.scale.setScalar(p.life * 2.5);
+                } else {
+                    p.mesh.scale.setScalar(p.life);
+                }
+
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
+                    particles.splice(i, 1);
+                }
+            }
+
+            // 更新子彈尾跡
+            for (let i = bulletTrails.length - 1; i >= 0; i--) {
+                const bt = bulletTrails[i];
+                bt.life -= bt.decay;
+                bt.mesh.material.opacity = bt.life;
+                if (bt.life <= 0) {
+                    scene.remove(bt.mesh);
+                    bulletTrails.splice(i, 1);
+                }
+            }
+        }
+
+        // 動畫循環
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updatePhysics();
+            updateBots();
+            updateVFX();
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 載入完畢初始化
+        window.onload = function () {
+            init();
+            animate();
+        };
+
+    </script>
+</body>
+</html>
