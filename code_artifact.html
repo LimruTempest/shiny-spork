@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>夢幻魔法花園 - 50物種大擴充</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Tailwind Configuration for custom colors -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            sky: { 850: '#072e50' },
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom CSS for Animations and Glassmorphism -->
+  <style>
+    @keyframes rain {
+      0% { background-position: 0px 0px; }
+      100% { background-position: 40px 400px; }
+    }
+    @keyframes meteor {
+      0% { transform: translate(0, 0) rotate(-45deg); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translate(300px, 300px) rotate(-45deg); opacity: 0; }
+    }
+    @keyframes floatUp {
+      0% { transform: translate(-50%, -100%) scale(0.8); opacity: 1; }
+      100% { transform: translate(-50%, -250%) scale(1.1); opacity: 0; }
+    }
+    @keyframes zoomIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .backdrop-blur-glass {
+      backdrop-filter: blur(12px);
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+    .dark .backdrop-blur-glass {
+      background-color: rgba(15, 23, 42, 0.45);
+    }
+    /* 自定義捲動條美化 */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1); 
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3); 
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5); 
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-slate-800 antialiased overflow-x-hidden selection:bg-emerald-300 selection:text-white">
+
+  <!-- Main App Container (Background dynamic) -->
+  <div id="app-container" class="min-h-screen transition-all duration-1000 relative font-sans pb-16 bg-gradient-to-br from-emerald-100 to-teal-100">
+    
+    <!-- Weather Effects Containers -->
+    <div id="weather-rain" class="absolute inset-0 pointer-events-none z-10 overflow-hidden hidden">
+      <div class="absolute inset-0 opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjIwIj48cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSIyMCIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==')] animate-[rain_0.8s_linear_infinite]"></div>
+    </div>
+    <div id="weather-stars" class="absolute inset-0 pointer-events-none z-10 overflow-hidden hidden">
+      <div class="absolute inset-0 opacity-50 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCI+PGNpcmNsZSBjeD0iMjUiIGN5PSIyNSIgcj0iMSIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==')] animate-[pulse_4s_ease-in-out_infinite]"></div>
+    </div>
+    <div id="weather-meteor" class="absolute inset-0 pointer-events-none z-10 hidden">
+      <div class="absolute w-[2px] h-[80px] bg-gradient-to-b from-white to-transparent rotate-45 transform top-10 left-1/4 animate-[meteor_3s_linear_infinite]"></div>
+      <div class="absolute w-[2px] h-[100px] bg-gradient-to-b from-white to-transparent rotate-45 transform top-32 left-3/4 animate-[meteor_4s_linear_infinite_1.5s]"></div>
+    </div>
+
+    <!-- Floating Texts & Events Overlay -->
+    <div id="floating-texts" class="fixed inset-0 pointer-events-none z-50"></div>
+    <div id="random-events" class="absolute inset-0 pointer-events-none z-20"></div>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-30 backdrop-blur-md bg-white/35 border-b border-white/20 px-4 py-3 shadow-sm transition-all">
+      <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        
+        <!-- Logo/Title -->
+        <div class="flex items-center space-x-2">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-400 to-teal-500 flex items-center justify-center shadow-md animate-pulse">
+            <i data-lucide="sprout" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold tracking-wide flex items-center gap-1.5 text-slate-900">
+              夢幻精靈花園 <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500 text-white font-medium">50物種大擴充</span>
+            </h1>
+            <p class="text-[10px] opacity-75 text-slate-800">奇幻植物與四季氣候交織的種植世界</p>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="flex items-center space-x-4">
+          <div class="flex items-center space-x-2 bg-white/40 px-3 py-1.5 rounded-full border border-white/30 text-slate-900">
+            <i data-lucide="award" class="w-4 h-4 text-amber-500"></i>
+            <div class="text-xs">
+              <div class="font-bold flex items-center gap-1" id="ui-level">
+                LV.1 <span class="text-[10px] font-normal opacity-75">(0/100 XP)</span>
+              </div>
+              <div class="w-24 bg-gray-300 h-1.5 rounded-full overflow-hidden mt-0.5">
+                <div id="ui-xp-bar" class="bg-gradient-to-r from-teal-400 to-emerald-500 h-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center space-x-1.5 bg-yellow-400/25 border border-yellow-400/40 px-3 py-1.5 rounded-full animate-pulse">
+            <i data-lucide="coins" class="w-4.5 h-4.5 text-amber-500"></i>
+            <span id="ui-coins" class="font-black text-sm md:text-base text-amber-600">100</span>
+          </div>
+        </div>
+
+        <!-- Sync Status -->
+        <div class="flex items-center space-x-2">
+          <div id="ui-user-status" class="text-[10px] text-amber-600 bg-amber-500/10 px-2 py-1 rounded-md border border-amber-500/20">
+            載入中...
+          </div>
+          <button id="btn-save" class="p-1.5 hover:bg-white/20 rounded-lg text-slate-700 transition-all flex items-center justify-center" title="儲存進度">
+            <i data-lucide="refresh-cw" id="icon-save" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-4 mt-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Left Column (4 Cols) -->
+      <div class="lg:col-span-4 space-y-6">
+        
+        <!-- Weather Card -->
+        <section class="backdrop-blur-glass p-4 rounded-3xl border border-white/20 shadow-lg relative overflow-hidden">
+          <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center justify-between mb-3 text-slate-900">
+            <h2 class="text-xs font-bold uppercase tracking-wider opacity-75">當前氣象精靈</h2>
+            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">每45秒變換</span>
+          </div>
+          <div class="flex items-center space-x-4" id="ui-weather">
+            <!-- Weather content injected via JS -->
+          </div>
+        </section>
+
+        <!-- Tools Box -->
+        <section class="backdrop-blur-glass p-4 rounded-3xl border border-white/20 shadow-lg">
+          <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900">
+            <i data-lucide="sparkles" class="w-4 h-4 text-emerald-500"></i> 神奇園藝工具
+          </h2>
+          <div class="grid grid-cols-2 gap-2.5" id="ui-tools">
+            <!-- Tools injected via JS -->
+          </div>
+          <div class="mt-3">
+            <button id="btn-water-all" class="w-full py-2 bg-gradient-to-r from-sky-400/80 to-blue-500/80 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5">
+              <i data-lucide="droplets" class="w-3.5 h-3.5"></i> 給全部作物澆水 (一鍵加速)
+            </button>
+          </div>
+        </section>
+
+        <!-- Inventory Box -->
+        <section class="backdrop-blur-glass p-4 rounded-3xl border border-white/20 shadow-lg flex flex-col max-h-[500px]">
+          <div class="flex items-center justify-between mb-3 shrink-0">
+            <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <i data-lucide="store" class="w-4 h-4 text-amber-500"></i>
+              我的種子包 <span id="ui-inv-count">(0)</span>
+            </h2>
+            <span class="text-[10px] opacity-75 text-slate-900">點擊選定播種</span>
+          </div>
+          <div id="ui-inventory" class="space-y-2 overflow-y-auto pr-2 custom-scrollbar flex-1 pb-2">
+            <!-- Inventory items injected via JS -->
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Right Column (8 Cols) -->
+      <div class="lg:col-span-8 space-y-6">
+        
+        <!-- Tabs Nav -->
+        <div class="flex space-x-1.5 bg-white/25 p-1.5 rounded-2xl border border-white/10" id="ui-tabs-nav">
+          <button data-tab="garden" class="tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all bg-white text-slate-900 shadow-sm">
+            <i data-lucide="sprout" class="w-4 h-4"></i><span class="hidden sm:inline">我的魔法花園</span>
+          </button>
+          <button data-tab="shop" class="tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all text-slate-700 hover:bg-white/10">
+            <i data-lucide="store" class="w-4 h-4"></i><span class="hidden sm:inline">全圖鑑商店</span>
+          </button>
+          <button data-tab="achievements" class="tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all text-slate-700 hover:bg-white/10">
+            <i data-lucide="award" class="w-4 h-4"></i><span class="hidden sm:inline">成就與歷史</span>
+          </button>
+          <button data-tab="guide" class="tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all text-slate-700 hover:bg-white/10">
+            <i data-lucide="help-circle" class="w-4 h-4"></i><span class="hidden sm:inline">花園指南</span>
+          </button>
+        </div>
+
+        <!-- Tab Contents -->
+        
+        <!-- Garden Tab -->
+        <div id="tab-garden" class="tab-content space-y-4">
+          <div id="ui-plots" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <!-- Plots injected via JS -->
+          </div>
+          <div class="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 rounded-2xl text-xs flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4 flex-shrink-0 animate-spin"></i>
+            <span><strong>50種全圖鑑已解鎖：</strong>從基礎的番茄蘿蔔到傳說中的「銀河造物神木」，努力累積經驗並升級解鎖購買權限吧！流星雨天氣下依然享有無條件的 <strong>1.5 倍</strong> 金幣與經驗爆發喔！</span>
+          </div>
+        </div>
+
+        <!-- Shop Tab -->
+        <div id="tab-shop" class="tab-content hidden backdrop-blur-glass p-2 md:p-4 rounded-3xl border border-white/20 shadow-lg flex-col h-[700px]">
+          <h2 class="text-sm font-bold mb-3 flex items-center gap-2 text-slate-900 px-2">
+            <i data-lucide="map" class="w-5 h-5 text-amber-500"></i>
+            環遊世界全圖鑑商店 (50 種)
+          </h2>
+          <div id="ui-shop" class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto custom-scrollbar pr-3 pb-4">
+            <!-- Shop items injected via JS -->
+          </div>
+        </div>
+
+        <!-- Achievements Tab -->
+        <div id="tab-achievements" class="tab-content hidden backdrop-blur-glass p-5 rounded-3xl border border-white/20 shadow-md space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="award" class="w-5 h-5 text-amber-500"></i> 精靈園藝大師里程碑
+          </h2>
+          <div id="ui-achievements" class="space-y-3">
+            <!-- Achievements injected via JS -->
+          </div>
+          <div class="pt-6 border-t border-white/20">
+            <h3 class="text-xs font-bold text-rose-500 uppercase tracking-wider mb-2">安全與設置區</h3>
+            <button id="btn-reset" class="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 text-xs rounded-xl transition-all flex items-center gap-1.5 font-bold">
+              <i data-lucide="trash-2" class="w-4 h-4"></i> 清除並重置花園存檔
+            </button>
+          </div>
+        </div>
+
+        <!-- Guide Tab -->
+        <div id="tab-guide" class="tab-content hidden backdrop-blur-glass p-5 rounded-3xl border border-white/20 shadow-md space-y-4 text-slate-800">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="help-circle" class="w-5 h-5 text-sky-500"></i> 夢幻花園新手指南
+          </h2>
+          <div class="space-y-3 text-xs leading-relaxed">
+            <div class="bg-white/30 p-3 rounded-2xl">
+              <h3 class="font-bold text-emerald-600 mb-1">🌱 1. 播種與 50 種植物圖鑑</h3>
+              <p>本次開放了從新手最愛的「夢幻草莓」到耗時數百秒、價值非凡的「銀河造物神木」共 50 種截然不同的奇幻植物。您可在全圖鑑商店往下滑動查看所有的植物。努力採收來解鎖最高階的傳奇種子吧！</p>
+            </div>
+            <div class="bg-white/30 p-3 rounded-2xl">
+              <h3 class="font-bold text-sky-600 mb-1">💧 2. 灌溉與生長速度</h3>
+              <p>使用「魔法灌溉」可以為植物施加水分加成，使植物生長速度<strong>翻倍（200%）</strong>。在天氣為「綿綿細雨」時，大地所有植物均會自動獲得灌溉效果！</p>
+            </div>
+            <div class="bg-white/30 p-3 rounded-2xl">
+              <h3 class="font-bold text-amber-600 mb-1">🌟 3. 天氣對植物的奇效</h3>
+              <ul class="list-disc list-inside space-y-1">
+                <li><strong>和煦陽光：</strong>基礎生長速度增加 25%。</li>
+                <li><strong>流星雨暴擊：</strong>在流星雨下採收植物，可獲得雙倍幸福加成 (金幣 1.5 倍)！</li>
+                <li><strong>靜謐星夜：</strong>夜行植物會加速光合作用。</li>
+              </ul>
+            </div>
+            <div class="bg-white/30 p-3 rounded-2xl">
+              <h3 class="font-bold text-purple-600 mb-1">🦋 4. 捕捉隨機精靈事件</h3>
+              <p>花園中會隨機降臨「精靈毛毛蟲」、「星空寶石」與「精靈金幣」，在它們消失前點選它們，即可獲得豐富的驚喜好禮！</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Info Modal -->
+    <div id="modal-info" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm hidden">
+      <div class="bg-white border border-slate-200 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl animate-[zoomIn_0.3s_ease]">
+        <div id="modal-info-icon" class="text-5xl mb-4">🌟</div>
+        <h3 id="modal-info-title" class="text-lg font-black mb-2 text-slate-900">提示</h3>
+        <p id="modal-info-content" class="text-xs text-slate-600 leading-relaxed mb-5"></p>
+        <button id="btn-modal-info-close" class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition-all">我知道了</button>
+      </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="modal-confirm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm hidden">
+      <div class="bg-white border border-slate-200 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl animate-[zoomIn_0.2s_ease]">
+        <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="alert-circle" class="w-6 h-6 text-rose-500"></i>
+        </div>
+        <h3 id="modal-confirm-title" class="text-md font-extrabold mb-1.5 text-slate-900">確認</h3>
+        <p id="modal-confirm-content" class="text-xs text-slate-500 leading-relaxed mb-5"></p>
+        <div class="flex gap-3">
+          <button id="btn-modal-confirm-cancel" class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all">取消</button>
+          <button id="btn-modal-confirm-ok" class="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs rounded-xl shadow-md transition-all">確認執行</button>
+        </div>
+      </div>
+    </div>
+
+    <footer class="mt-12 text-center text-[10px] text-slate-600 opacity-80 py-6">
+      <p>© 2026 夢幻魔法花園放置遊戲. HTML重製升級版。</p>
+    </footer>
+
+  </div>
+
+  <!-- JavaScript App Logic -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+    import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+    // --- GAME DATA ---
+    const CROPS_DATA = {
+      strawberry: { id: 'strawberry', name: '夢幻草莓', seedPrice: 10, sellPrice: 25, growTime: 3, xp: 8, icon: '🍓', color: 'from-pink-400 to-red-500' },
+      tomato: { id: 'tomato', name: '赤紅番茄', seedPrice: 15, sellPrice: 35, growTime: 4, xp: 12, icon: '🍅', color: 'from-red-500 to-orange-500' },
+      carrot: { id: 'carrot', name: '活力蘿蔔', seedPrice: 20, sellPrice: 48, growTime: 5, xp: 15, icon: '🥕', color: 'from-orange-400 to-amber-500' },
+      tulip: { id: 'tulip', name: '極光鬱金香', seedPrice: 25, sellPrice: 65, growTime: 6, xp: 18, icon: '🌷', color: 'from-purple-400 to-pink-500' },
+      daisy: { id: 'daisy', name: '陽光雛菊', seedPrice: 30, sellPrice: 75, growTime: 7, xp: 20, icon: '🌼', color: 'from-yellow-300 to-yellow-500' },
+      blueberry: { id: 'blueberry', name: '星空藍莓', seedPrice: 40, sellPrice: 110, growTime: 8, xp: 25, icon: '🫐', color: 'from-blue-400 to-indigo-600' },
+      cherry: { id: 'cherry', name: '雙子櫻桃', seedPrice: 45, sellPrice: 125, growTime: 9, xp: 28, icon: '🍒', color: 'from-red-400 to-rose-600' },
+      apple: { id: 'apple', name: '智慧蘋果', seedPrice: 50, sellPrice: 140, growTime: 10, xp: 30, icon: '🍎', color: 'from-red-500 to-red-700' },
+      sunflower: { id: 'sunflower', name: '烈陽向日葵', seedPrice: 60, sellPrice: 180, growTime: 12, xp: 35, icon: '🌻', color: 'from-yellow-400 to-amber-500' },
+      peach: { id: 'peach', name: '蜜桃仙子', seedPrice: 70, sellPrice: 210, growTime: 14, xp: 40, icon: '🍑', color: 'from-pink-300 to-rose-400' },
+      rose: { id: 'rose', name: '水晶玫瑰', seedPrice: 80, sellPrice: 250, growTime: 16, xp: 50, icon: '🌹', color: 'from-red-400 to-rose-600' },
+      lemon: { id: 'lemon', name: '閃光檸檬', seedPrice: 90, sellPrice: 280, growTime: 18, xp: 60, icon: '🍋', color: 'from-yellow-200 to-yellow-400' },
+      lavender: { id: 'lavender', name: '星空薰衣草', seedPrice: 110, sellPrice: 360, growTime: 20, xp: 70, icon: '🪻', color: 'from-indigo-400 to-purple-600' },
+      grape: { id: 'grape', name: '琉璃葡萄', seedPrice: 125, sellPrice: 400, growTime: 22, xp: 80, icon: '🍇', color: 'from-purple-500 to-purple-700' },
+      melon: { id: 'melon', name: '翡翠甜瓜', seedPrice: 140, sellPrice: 460, growTime: 24, xp: 90, icon: '🍈', color: 'from-green-300 to-green-500' },
+      cactus: { id: 'cactus', name: '彩虹仙人掌', seedPrice: 150, sellPrice: 500, growTime: 25, xp: 100, icon: '🌵', color: 'from-emerald-400 to-green-600' },
+      watermelon: { id: 'watermelon', name: '綠洲西瓜', seedPrice: 170, sellPrice: 580, growTime: 28, xp: 115, icon: '🍉', color: 'from-green-400 to-red-400' },
+      clover: { id: 'clover', name: '幸運四葉草', seedPrice: 200, sellPrice: 700, growTime: 30, xp: 130, icon: '🍀', color: 'from-teal-400 to-emerald-600' },
+      mushroom: { id: 'mushroom', name: '精靈蘑菇', seedPrice: 220, sellPrice: 780, growTime: 32, xp: 145, icon: '🍄', color: 'from-red-500 to-orange-400' },
+      bamboo: { id: 'bamboo', name: '祈願翠竹', seedPrice: 250, sellPrice: 900, growTime: 35, xp: 160, icon: '🎍', color: 'from-green-500 to-emerald-700' },
+      pine: { id: 'pine', name: '霜雪松樹', seedPrice: 280, sellPrice: 1000, growTime: 38, xp: 180, icon: '🌲', color: 'from-cyan-600 to-blue-800' },
+      maple: { id: 'maple', name: '晚霞楓樹', seedPrice: 320, sellPrice: 1150, growTime: 40, xp: 200, icon: '🍁', color: 'from-orange-500 to-red-600' },
+      coconut: { id: 'coconut', name: '夏日椰子', seedPrice: 350, sellPrice: 1300, growTime: 42, xp: 220, icon: '🥥', color: 'from-amber-600 to-amber-800' },
+      pineapple: { id: 'pineapple', name: '皇冠鳳梨', seedPrice: 400, sellPrice: 1500, growTime: 45, xp: 250, icon: '🍍', color: 'from-yellow-400 to-amber-600' },
+      mango: { id: 'mango', name: '晨曦芒果', seedPrice: 450, sellPrice: 1700, growTime: 48, xp: 280, icon: '🥭', color: 'from-orange-400 to-orange-600' },
+      kiwi: { id: 'kiwi', name: '寶石奇異果', seedPrice: 500, sellPrice: 1950, growTime: 50, xp: 310, icon: '🥝', color: 'from-lime-400 to-green-600' },
+      avocado: { id: 'avocado', name: '生命酪梨', seedPrice: 550, sellPrice: 2200, growTime: 52, xp: 350, icon: '🥑', color: 'from-green-600 to-green-800' },
+      chestnut: { id: 'chestnut', name: '大地堅果', seedPrice: 600, sellPrice: 2450, growTime: 55, xp: 390, icon: '🌰', color: 'from-amber-700 to-amber-900' },
+      olive: { id: 'olive', name: '和平橄欖', seedPrice: 650, sellPrice: 2700, growTime: 58, xp: 430, icon: '🫒', color: 'from-lime-500 to-lime-700' },
+      corn: { id: 'corn', name: '黃金玉米', seedPrice: 700, sellPrice: 3000, growTime: 60, xp: 480, icon: '🌽', color: 'from-yellow-300 to-yellow-600' },
+      eggplant: { id: 'eggplant', name: '虛空茄子', seedPrice: 800, sellPrice: 3400, growTime: 65, xp: 550, icon: '🍆', color: 'from-purple-600 to-purple-900' },
+      chilli: { id: 'chilli', name: '烈焰辣椒', seedPrice: 900, sellPrice: 3900, growTime: 70, xp: 620, icon: '🌶️', color: 'from-red-500 to-red-800' },
+      lotus: { id: 'lotus', name: '淨水蓮花', seedPrice: 1000, sellPrice: 4500, growTime: 75, xp: 700, icon: '🪷', color: 'from-pink-300 to-rose-300' },
+      hibiscus: { id: 'hibiscus', name: '熱情扶桑', seedPrice: 1200, sellPrice: 5500, growTime: 80, xp: 800, icon: '🌺', color: 'from-rose-400 to-red-500' },
+      leaf: { id: 'leaf', name: '精靈飛葉', seedPrice: 1500, sellPrice: 7000, growTime: 85, xp: 1000, icon: '🍃', color: 'from-green-300 to-emerald-400' },
+      herb: { id: 'herb', name: '治癒靈草', seedPrice: 1800, sellPrice: 8500, growTime: 90, xp: 1200, icon: '🌿', color: 'from-emerald-300 to-green-500' },
+      onion: { id: 'onion', name: '水晶洋蔥', seedPrice: 2200, sellPrice: 10500, growTime: 95, xp: 1400, icon: '🧅', color: 'from-amber-200 to-orange-300' },
+      garlic: { id: 'garlic', name: '驅魔聖蒜', seedPrice: 2600, sellPrice: 12800, growTime: 100, xp: 1700, icon: '🧄', color: 'from-slate-200 to-slate-400' },
+      potato: { id: 'potato', name: '大地靈薯', seedPrice: 3000, sellPrice: 15000, growTime: 105, xp: 2000, icon: '🥔', color: 'from-yellow-600 to-amber-700' },
+      broccoli: { id: 'broccoli', name: '森之守護', seedPrice: 3500, sellPrice: 18000, growTime: 110, xp: 2400, icon: '🥦', color: 'from-green-600 to-emerald-800' },
+      ice_flower: { id: 'ice_flower', name: '絕對冰花', seedPrice: 4500, sellPrice: 24000, growTime: 120, xp: 3000, icon: '❄️', color: 'from-cyan-300 to-blue-400' },
+      fire_flower: { id: 'fire_flower', name: '不滅火之花', seedPrice: 5500, sellPrice: 30000, growTime: 130, xp: 3800, icon: '🔥', color: 'from-orange-500 to-red-600' },
+      thunder_sprout: { id: 'thunder_sprout', name: '雷鳴閃光芽', seedPrice: 7000, sellPrice: 39000, growTime: 140, xp: 4800, icon: '⚡', color: 'from-yellow-300 to-amber-400' },
+      moon_lotus: { id: 'moon_lotus', name: '幻月神蓮', seedPrice: 9000, sellPrice: 52000, growTime: 150, xp: 6000, icon: '🌙', color: 'from-indigo-300 to-purple-400' },
+      star_fruit: { id: 'star_fruit', name: '許願星隕果', seedPrice: 12000, sellPrice: 70000, growTime: 165, xp: 8000, icon: '🌟', color: 'from-yellow-200 to-yellow-500' },
+      rainbow_seed: { id: 'rainbow_seed', name: '霓虹彩虹花', seedPrice: 15000, sellPrice: 90000, growTime: 180, xp: 10000, icon: '🌈', color: 'from-red-400 via-green-400 to-blue-500' },
+      magic_tree: { id: 'magic_tree', name: '時光世界樹', seedPrice: 20000, sellPrice: 125000, growTime: 200, xp: 13000, icon: '🌳', color: 'from-green-500 to-teal-700' },
+      cosmic_flower: { id: 'cosmic_flower', name: '宇宙星辰花', seedPrice: 28000, sellPrice: 180000, growTime: 220, xp: 18000, icon: '🌌', color: 'from-violet-500 to-fuchsia-700' },
+      sun_core: { id: 'sun_core', name: '耀陽核心', seedPrice: 40000, sellPrice: 260000, growTime: 250, xp: 25000, icon: '☀️', color: 'from-yellow-400 to-orange-500' },
+      galaxy_tree: { id: 'galaxy_tree', name: '銀河造物神木', seedPrice: 60000, sellPrice: 400000, growTime: 300, xp: 40000, icon: '🪐', color: 'from-indigo-600 via-purple-600 to-pink-600' },
+    };
+
+    const WEATHER_TYPES = [
+      { id: 'Sunny', name: '和煦陽光', desc: '生長速度增加 25%', icon: 'sun', color: 'from-amber-400 to-orange-500', speedMult: 1.25 },
+      { id: 'Rain', name: '綿綿細雨', desc: '作物會自動澆水', icon: 'cloud-rain', color: 'from-sky-400 to-blue-500', speedMult: 1.0 },
+      { id: 'Night', name: '靜謐星夜', desc: '夜行植物生長增加 50%', icon: 'moon', color: 'from-indigo-900 via-purple-900 to-slate-900', speedMult: 1.0 },
+      { id: 'Meteor', name: '流星雨暴擊', desc: '金幣產出雙倍', icon: 'star', color: 'from-violet-800 via-indigo-950 to-purple-950', speedMult: 1.5 },
+    ];
+
+    const TOOLS = [
+      { id: 'plant', name: '播種種子', desc: '雙擊選擇種子', icon: 'sprout', activeColor: 'bg-emerald-500 text-white' },
+      { id: 'water', name: '魔法灌溉', desc: '加速 100% 成長', icon: 'droplets', activeColor: 'bg-sky-500 text-white' },
+      { id: 'harvest', name: '採收熟果', desc: '換取金幣與經驗', icon: 'star', activeColor: 'bg-amber-400 text-slate-900' },
+      { id: 'shovel', name: '除根鏟子', desc: '清除枯萎土地', icon: 'trash-2', activeColor: 'bg-rose-500 text-white' },
+    ];
+
+    // --- STATE ---
+    const getInitialInventory = () => {
+      const inv = Object.keys(CROPS_DATA).reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
+      inv.strawberry = 3;
+      inv.tulip = 1;
+      return inv;
+    };
+
+    let state = {
+      coins: 100, level: 1, xp: 0,
+      inventory: getInitialInventory(),
+      plots: [
+        { id: 1, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+        { id: 2, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+        { id: 3, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+        { id: 4, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+        { id: 5, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+        { id: 6, plant: null, plantedAt: null, watered: false, progress: 0, speedMult: 1 },
+      ],
+      weather: 'Sunny',
+      activeTab: 'garden',
+      selectedSeed: 'strawberry',
+      activeTool: 'plant',
+      events: []
+    };
+
+    let auth, db, appId, firebaseAvailable = false, user = null, confirmCallback = null;
+
+    // --- FIREBASE INIT ---
+    async function initFirebase() {
+      try {
+        const configStr = typeof window.__firebase_config !== 'undefined' ? window.__firebase_config : null;
+        if (configStr) {
+          const config = JSON.parse(configStr);
+          const app = initializeApp(config);
+          auth = getAuth(app);
+          db = getFirestore(app);
+          appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'dreamy-garden-html';
+          firebaseAvailable = true;
+
+          const initAuth = async () => {
+            if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+              await signInWithCustomToken(auth, window.__initial_auth_token);
+            } else {
+              await signInAnonymously(auth);
+            }
+          };
+          await initAuth();
+
+          onAuthStateChanged(auth, (currentUser) => {
+            user = currentUser;
+            document.getElementById('ui-user-status').innerText = user ? '雲端同步中' : '匿名訪客';
+            document.getElementById('ui-user-status').className = "text-[10px] text-emerald-700 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/30";
+            if(user) loadCloudData(user.uid);
+          });
+        } else {
+          fallbackLocal();
+        }
+      } catch (err) {
+        console.warn("Firebase 未配置，啟用高品質本地離線存檔模式。", err);
+        fallbackLocal();
+      }
+    }
+
+    function fallbackLocal() {
+      const localData = localStorage.getItem('dreamy_garden_html_v1');
+      if (localData) {
+        try {
+          const parsed = JSON.parse(localData);
+          if (parsed.coins !== undefined) state.coins = parsed.coins;
+          if (parsed.level !== undefined) state.level = parsed.level;
+          if (parsed.xp !== undefined) state.xp = parsed.xp;
+          if (parsed.inventory !== undefined) state.inventory = { ...state.inventory, ...parsed.inventory };
+          if (parsed.plots !== undefined) state.plots = parsed.plots;
+        } catch(e){}
+      }
+      document.getElementById('ui-user-status').innerText = '本地單機保護中';
+      renderAll();
+    }
+
+    async function loadCloudData(uid) {
+      if (!firebaseAvailable || !uid) return;
+      try {
+        const userDocRef = doc(db, 'artifacts', appId, 'users', uid, 'gameData', 'status_html');
+        const docSnap = await getDoc(userDocRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.coins !== undefined) state.coins = data.coins;
+          if (data.level !== undefined) state.level = data.level;
+          if (data.xp !== undefined) state.xp = data.xp;
+          if (data.inventory !== undefined) state.inventory = { ...state.inventory, ...data.inventory };
+          if (data.plots !== undefined) state.plots = data.plots;
+          triggerFloat("✨ 雲端存檔同步成功！", window.innerWidth / 2, 120, "text-emerald-500");
+          renderAll();
+        }
+      } catch (err) {}
+    }
+
+    async function saveCloudData() {
+      if (!firebaseAvailable) {
+        localStorage.setItem('dreamy_garden_html_v1', JSON.stringify({
+          coins: state.coins, level: state.level, xp: state.xp, inventory: state.inventory, plots: state.plots
+        }));
+        return;
+      }
+      if (!user) return;
+      const iconSave = document.getElementById('icon-save');
+      iconSave.classList.add('animate-spin');
+      try {
+        const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'gameData', 'status_html');
+        await setDoc(userDocRef, {
+          coins: state.coins, level: state.level, xp: state.xp, inventory: state.inventory, plots: state.plots, updatedAt: Date.now()
+        }, { merge: true });
+      } catch (err) {}
+      setTimeout(() => iconSave.classList.remove('animate-spin'), 1000);
+    }
+
+    // --- RENDERERS ---
+    function renderAll() {
+      renderHeader();
+      renderWeather();
+      renderTools();
+      renderInventory();
+      renderPlots();
+      renderShop();
+      renderAchievements();
+      updateAppBackground();
+      lucide.createIcons();
+    }
+
+    function renderHeader() {
+      document.getElementById('ui-coins').innerText = state.coins.toLocaleString();
+      document.getElementById('ui-level').innerHTML = `LV.${state.level} <span class="text-[10px] font-normal opacity-75">(${Math.floor(state.xp)}/${state.level * 100} XP)</span>`;
+      const xpPercent = Math.min(100, (state.xp / (state.level * 100)) * 100);
+      document.getElementById('ui-xp-bar').style.width = `${xpPercent}%`;
+    }
+
+    function renderWeather() {
+      const activeWeather = WEATHER_TYPES.find(w => w.id === state.weather) || WEATHER_TYPES[0];
+      document.getElementById('ui-weather').innerHTML = `
+        <div class="p-3.5 rounded-2xl bg-gradient-to-tr ${activeWeather.color} text-white shadow-md animate-bounce">
+          <i data-lucide="${activeWeather.icon}" class="w-7 h-7"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-lg text-slate-900">${activeWeather.name}</h3>
+          <p class="text-xs opacity-85 mt-0.5 text-slate-700">${activeWeather.desc}</p>
+        </div>
+      `;
+      updateAppBackground();
+    }
+
+    function updateAppBackground() {
+      const appDiv = document.getElementById('app-container');
+      const rain = document.getElementById('weather-rain');
+      const stars = document.getElementById('weather-stars');
+      const meteor = document.getElementById('weather-meteor');
+      
+      let bgClass = '';
+      rain.classList.add('hidden'); stars.classList.add('hidden'); meteor.classList.add('hidden');
+
+      switch (state.weather) {
+        case 'Sunny': bgClass = 'from-amber-100 via-sky-100 to-emerald-100 text-slate-800'; break;
+        case 'Rain': bgClass = 'from-slate-300 via-sky-300 to-emerald-200 text-slate-800'; rain.classList.remove('hidden'); break;
+        case 'Night': bgClass = 'from-indigo-900 via-slate-800 to-slate-900 text-indigo-100'; stars.classList.remove('hidden'); break;
+        case 'Meteor': bgClass = 'from-indigo-950 via-purple-900 to-violet-950 text-purple-100'; stars.classList.remove('hidden'); meteor.classList.remove('hidden'); break;
+      }
+      appDiv.className = `min-h-screen transition-all duration-1000 overflow-x-hidden relative bg-gradient-to-br ${bgClass} font-sans pb-16`;
+      
+      // Update header font colors depending on dark/light
+      const isDark = state.weather === 'Night' || state.weather === 'Meteor';
+      const textEls = document.querySelectorAll('.text-slate-900, .text-slate-800, .text-white');
+      textEls.forEach(el => {
+        if(isDark && !el.closest('header') && !el.closest('#tab-shop')) {
+           // Basic logic, CSS handling is better but Tailwind variants handle this via config generally.
+        }
+      });
+    }
+
+    function renderTools() {
+      const container = document.getElementById('ui-tools');
+      container.innerHTML = TOOLS.map(tool => {
+        const isSelected = state.activeTool === tool.id;
+        const colorClass = isSelected ? `${tool.activeColor} border-transparent shadow-md scale-105` : 'bg-white/20 hover:bg-white/30 border-white/10 text-slate-700';
+        return `
+          <button data-tool="${tool.id}" class="tool-btn p-3 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 text-center border ${colorClass}">
+            <i data-lucide="${tool.icon}" class="w-5 h-5 mb-1 ${isSelected ? 'text-current' : 'text-slate-600'}"></i>
+            <span class="text-xs font-bold ${isSelected ? 'text-current' : 'text-slate-800'}">${tool.name}</span>
+            <span class="text-[9px] opacity-75 mt-0.5 hidden sm:block ${isSelected ? 'text-current' : 'text-slate-600'}">${tool.desc}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function renderInventory() {
+      const container = document.getElementById('ui-inventory');
+      let total = 0;
+      container.innerHTML = Object.keys(CROPS_DATA).map(cropId => {
+        const crop = CROPS_DATA[cropId];
+        const count = state.inventory[cropId] || 0;
+        total += count;
+        const isSelected = state.selectedSeed === cropId;
+        const colorClass = isSelected ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 border-emerald-500 shadow-sm' : (count > 0 ? 'bg-white/20 hover:bg-white/30 border-white/10' : 'bg-white/5 border-transparent opacity-60');
+        
+        return `
+          <button data-seed="${cropId}" class="inv-btn w-full p-2.5 rounded-2xl flex items-center justify-between transition-all border ${colorClass}">
+            <div class="flex items-center space-x-2.5">
+              <span class="text-2xl">${crop.icon}</span>
+              <div class="text-left">
+                <div class="text-xs font-bold text-slate-900">${crop.name}</div>
+                <div class="text-[10px] text-slate-600">生長: ${crop.growTime}s | 售價: ${crop.sellPrice}🪙</div>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs px-2.5 py-1 rounded-full font-bold ${count > 0 ? 'bg-emerald-500 text-white' : 'bg-rose-500/10 text-rose-500'}">${count} 顆</span>
+            </div>
+          </button>
+        `;
+      }).join('');
+      document.getElementById('ui-inv-count').innerText = `(${total})`;
+    }
+
+    function renderPlots() {
+      const container = document.getElementById('ui-plots');
+      container.innerHTML = state.plots.map(plot => {
+        const crop = plot.plant ? CROPS_DATA[plot.plant] : null;
+        const isReady = plot.progress >= 100;
+        const borderClass = plot.plant ? 'border-emerald-500/30 hover:scale-[1.02] bg-white/10' : 'border-dashed border-slate-400/40 hover:border-emerald-400/60 hover:bg-white/20';
+        
+        let statusIcons = '';
+        if(plot.plant) {
+          statusIcons = `<div class="absolute top-2.5 right-2.5 flex space-x-1.5 z-10">`;
+          if(plot.watered) statusIcons += `<span class="p-1 rounded-full bg-blue-500/20 text-blue-500 border border-blue-400/30 animate-pulse"><i data-lucide="droplets" class="w-3.5 h-3.5"></i></span>`;
+          if(isReady) statusIcons += `<span class="p-1 rounded-full bg-yellow-400/20 text-yellow-500 border border-yellow-400/30 animate-bounce"><i data-lucide="star" class="w-3.5 h-3.5 fill-current"></i></span>`;
+          statusIcons += `</div>`;
+        }
+
+        let innerHTML = '';
+        if(crop) {
+          innerHTML = `
+            <div class="text-center">
+              <div class="relative">
+                <span class="text-5xl inline-block transition-transform duration-500 ${isReady ? 'animate-bounce scale-110' : 'animate-pulse scale-90'}">${crop.icon}</span>
+                ${!isReady ? `<span class="absolute -top-1 -right-1 text-xs animate-ping">✨</span>` : ''}
+              </div>
+              <p class="text-xs font-bold mt-2 text-slate-800">${crop.name}</p>
+              <p class="text-[10px] text-slate-600">${isReady ? '🎉 已成熟！' : `🌱 成長度 ${Math.floor(plot.progress)}%`}</p>
+            </div>
+          `;
+        } else {
+          innerHTML = `
+            <div class="text-center opacity-65 group-hover:opacity-100 transition-opacity">
+              <i data-lucide="sprout" class="w-8 h-8 mx-auto text-slate-500 animate-pulse"></i>
+              <p class="text-xs font-bold mt-2 text-slate-800">閒置荒原</p>
+              <p class="text-[10px] text-slate-600">點選播種種植</p>
+            </div>
+          `;
+        }
+
+        let progressHTML = '';
+        if(plot.plant) {
+          progressHTML = `
+            <div class="mt-3 bg-gray-200 h-2 rounded-full overflow-hidden">
+              <div class="h-full transition-all duration-1000 ${isReady ? 'bg-gradient-to-r from-yellow-400 to-amber-500' : 'bg-gradient-to-r from-emerald-400 to-teal-500'}" style="width: ${plot.progress}%"></div>
+            </div>
+          `;
+        }
+
+        return `
+          <div data-plot="${plot.id}" class="plot-item relative group rounded-3xl p-4 transition-all duration-300 border backdrop-blur-glass shadow-md cursor-pointer hover:shadow-lg ${borderClass}">
+            ${statusIcons}
+            <span class="absolute top-2 left-3 text-[9px] uppercase font-bold text-slate-600 opacity-45">PL-0${plot.id}</span>
+            <div class="h-28 flex flex-col items-center justify-center mt-2 relative">
+              ${innerHTML}
+            </div>
+            ${progressHTML}
+            ${plot.plant ? `
+              <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center text-white text-center p-2 z-20">
+                <div class="text-xs">
+                  <p class="font-bold">${crop.name}</p>
+                  <p class="mt-1 ${isReady ? 'text-green-300 font-bold' : 'text-gray-300'}">${isReady ? '點擊直接採收 🍓' : (plot.watered ? "💧 成長加倍中" : "🪄 點擊使用工具")}</p>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderShop() {
+      const container = document.getElementById('ui-shop');
+      container.innerHTML = Object.keys(CROPS_DATA).map(cropId => {
+        const crop = CROPS_DATA[cropId];
+        return `
+          <div class="bg-white/30 p-4 rounded-2xl border border-white/40 shadow-sm flex flex-col justify-between hover:border-emerald-500/50 transition-colors">
+            <div>
+              <div class="flex items-start justify-between">
+                <div class="flex items-center space-x-3">
+                  <span class="text-4xl p-2 bg-white/40 rounded-2xl shadow-inner">${crop.icon}</span>
+                  <div>
+                    <h3 class="font-extrabold text-slate-900 text-sm">${crop.name}</h3>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-200/80 font-medium text-slate-700">生長: ${crop.growTime} 秒</span>
+                  </div>
+                </div>
+                <span class="text-xs font-black text-amber-600 flex items-center gap-0.5 bg-yellow-400/20 px-2 py-1 rounded-full whitespace-nowrap">
+                  ${crop.seedPrice} 🪙
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 mt-4 text-xs opacity-80">
+                <div class="bg-white/40 p-2 rounded-xl text-center shadow-sm">
+                  <p class="text-[10px] text-slate-600">採收賣價</p>
+                  <p class="font-bold text-amber-600">${crop.sellPrice} 金幣</p>
+                </div>
+                <div class="bg-white/40 p-2 rounded-xl text-center shadow-sm">
+                  <p class="text-[10px] text-slate-600">獲得經驗</p>
+                  <p class="font-bold text-teal-600">+${crop.xp} XP</p>
+                </div>
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-white/40 flex items-center space-x-2">
+              <button data-buy="${cropId}" data-qty="1" class="buy-btn flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-md">買 1 顆</button>
+              <button data-buy="${cropId}" data-qty="5" class="buy-btn flex-1 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 active:scale-95 text-white font-bold text-xs rounded-xl transition-all shadow-md">買 5 顆</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAchievements() {
+      const achs = [
+        { name: "初生精靈大師", desc: "角色等級達到 3 級", target: 3, current: state.level, icon: "🌱", done: state.level >= 3 },
+        { name: "白銀大富豪", desc: "持有精靈幣達到 1000 枚", target: 1000, current: state.coins, icon: "💰", done: state.coins >= 1000 },
+        { name: "莊園領主", desc: "角色等級達到 10 級", target: 10, current: state.level, icon: "👑", done: state.level >= 10 },
+        { name: "神話守護者", desc: "等級達 25 級解鎖終極圖鑑", target: 25, current: state.level, icon: "🌌", done: state.level >= 25 },
+      ];
+      const container = document.getElementById('ui-achievements');
+      container.innerHTML = achs.map(ach => `
+        <div class="p-3 rounded-2xl flex items-center justify-between border ${ach.done ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-white/30 border-white/40'}">
+          <div class="flex items-center space-x-3">
+            <span class="text-3xl">${ach.icon}</span>
+            <div>
+              <h4 class="text-xs font-bold text-slate-900">${ach.name}</h4>
+              <p class="text-[10px] text-slate-600">${ach.desc}</p>
+            </div>
+          </div>
+          <div>
+            ${ach.done ? `<span class="text-xs px-2.5 py-1 bg-emerald-500 text-white font-bold rounded-full flex items-center gap-1"><i data-lucide="check" class="w-3.5 h-3.5"></i>已解鎖</span>` 
+                       : `<span class="text-[10px] px-2.5 py-1 bg-slate-300/50 text-slate-700 font-bold rounded-full">${ach.current} / ${ach.target}</span>`}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // --- GAME LOGIC ---
+    function addXp(amount) {
+      state.xp += amount;
+      let nextLevelThreshold = state.level * 100;
+      let leveledUp = false;
+
+      while (state.xp >= nextLevelThreshold) {
+        state.xp -= nextLevelThreshold;
+        state.level += 1;
+        nextLevelThreshold = state.level * 100;
+        state.coins += 100;
+        leveledUp = true;
+      }
+      
+      if(leveledUp) {
+        setTimeout(() => showModal("🎉 恭喜花園大師升級！", `您已升級至等級 ${state.level}！解鎖了更多魔法空間，並獲得了 100 金幣獎勵！`, '🌟'), 300);
+      }
+      renderHeader();
+      renderAchievements();
+    }
+
+    function triggerFloat(text, x, y, colorClass="text-yellow-400") {
+      const el = document.createElement('div');
+      el.className = `absolute animate-bounce transition-all duration-1000 font-extrabold drop-shadow-md text-sm md:text-lg z-50 ${colorClass}`;
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+      el.style.transform = 'translate(-50%, -100%)';
+      el.style.animation = 'floatUp 1.5s ease-out forwards';
+      el.innerText = text;
+      document.getElementById('floating-texts').appendChild(el);
+      setTimeout(() => el.remove(), 1500);
+    }
+
+    function spawnRandomEvent() {
+      const eventTypes = [
+        { id: 'bug', icon: '🐛', label: '魔法毛毛蟲', color: 'text-lime-500' },
+        { id: 'gem', icon: '💎', label: '星光寶石', color: 'text-cyan-500' },
+        { id: 'coin', icon: '🪙', label: '遺失的精靈幣', color: 'text-yellow-500' },
+      ];
+      const chosen = eventTypes[Math.floor(Math.random() * eventTypes.length)];
+      const x = Math.random() * 80 + 10; 
+      const y = Math.random() * 60 + 20;
+      const eventId = Date.now();
+
+      const btn = document.createElement('button');
+      btn.className = 'absolute pointer-events-auto flex flex-col items-center justify-center animate-bounce cursor-pointer p-2 rounded-full transition-transform hover:scale-125 focus:outline-none';
+      btn.style.left = `${x}%`;
+      btn.style.top = `${y}%`;
+      btn.innerHTML = `<div class="text-3xl drop-shadow-md">${chosen.icon}</div><span class="text-[10px] px-1.5 py-0.5 mt-1 bg-black/60 text-white rounded-full whitespace-nowrap">${chosen.label}!</span>`;
+      
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        btn.remove();
+        let rewardText = "";
+        if (chosen.id === 'bug') { rewardText = `🐛 +15 金幣 +10 經驗`; state.coins += 15; addXp(10); }
+        else if (chosen.id === 'gem') { rewardText = `💎 +40 金幣 +25 經驗`; state.coins += 40; addXp(25); }
+        else if (chosen.id === 'coin') { rewardText = `🪙 +20 金幣`; state.coins += 20; }
+        
+        triggerFloat(rewardText, e.clientX, e.clientY, `font-extrabold ${chosen.color}`);
+        renderHeader();
+      };
+
+      document.getElementById('random-events').appendChild(btn);
+      setTimeout(() => { if(btn.parentNode) btn.remove(); }, 12000);
+    }
+
+    // --- INTERACTION LOGIC ---
+    function handlePlotInteraction(plotId, e) {
+      const plot = state.plots.find(p => p.id === plotId);
+      if (!plot) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = rect.left + rect.width / 2;
+      const clickY = rect.top;
+
+      if (state.activeTool === 'shovel') {
+        if (!plot.plant) { triggerFloat("❌ 這裡沒有作物", clickX, clickY, "text-rose-500"); return; }
+        showConfirm("🍂 確定要剷除作物嗎？", `您將清除正在生長中的 [${CROPS_DATA[plot.plant].name}]，此動作將不會退回種子與精靈幣！`, () => {
+          plot.plant = null; plot.plantedAt = null; plot.watered = false; plot.progress = 0;
+          triggerFloat("🧹 已清除土地", clickX, clickY, "text-slate-600");
+          renderPlots(); lucide.createIcons();
+        });
+        return;
+      }
+
+      if (state.activeTool === 'plant') {
+        if (plot.plant) { triggerFloat("❌ 這塊地已經有種植物", clickX, clickY, "text-rose-500"); return; }
+        if (!state.inventory[state.selectedSeed] || state.inventory[state.selectedSeed] <= 0) { triggerFloat("❌ 種子不足，請去商店購買！", clickX, clickY, "text-rose-500"); return; }
+        
+        state.inventory[state.selectedSeed]--;
+        plot.plant = state.selectedSeed; plot.plantedAt = Date.now(); plot.watered = false; plot.progress = 0;
+        triggerFloat(`🌱 種下了 ${CROPS_DATA[state.selectedSeed].name}!`, clickX, clickY, "text-emerald-600 font-black");
+        renderInventory(); renderPlots(); lucide.createIcons();
+        return;
+      }
+
+      if (state.activeTool === 'water') {
+        if (!plot.plant) { triggerFloat("❌ 這裡還沒有種植物", clickX, clickY, "text-rose-500"); return; }
+        if (plot.watered) { triggerFloat("💧 泥土已經十分濕潤了", clickX, clickY, "text-sky-500"); return; }
+        plot.watered = true;
+        triggerFloat("💧 滋潤灌溉 +20% 成長速度！", clickX, clickY, "text-blue-500 font-bold");
+        renderPlots(); lucide.createIcons();
+        return;
+      }
+
+      if (state.activeTool === 'harvest') {
+        if (!plot.plant) { triggerFloat("❌ 這裡空空如也", clickX, clickY, "text-rose-500"); return; }
+        if (plot.progress < 100) { triggerFloat("⏳ 作物還在努力生長中...", clickX, clickY, "text-amber-500"); return; }
+
+        const crop = CROPS_DATA[plot.plant];
+        let coinsEarned = crop.sellPrice;
+        let xpEarned = crop.xp;
+        if (state.weather === 'Meteor') { coinsEarned = Math.floor(coinsEarned * 1.5); xpEarned = Math.floor(xpEarned * 1.5); }
+
+        state.coins += coinsEarned;
+        addXp(xpEarned);
+        plot.plant = null; plot.plantedAt = null; plot.watered = false; plot.progress = 0;
+
+        triggerFloat(`✨ 採收！+${coinsEarned} 🪙 +${xpEarned} 🌟`, clickX, clickY, "text-amber-500 font-black text-lg");
+        renderHeader(); renderPlots(); lucide.createIcons();
+      }
+    }
+
+    // --- MODALS ---
+    function showModal(title, content, icon) {
+      document.getElementById('modal-info-icon').innerText = icon;
+      document.getElementById('modal-info-title').innerText = title;
+      document.getElementById('modal-info-content').innerText = content;
+      document.getElementById('modal-info').classList.remove('hidden');
+    }
+    function showConfirm(title, content, callback) {
+      document.getElementById('modal-confirm-title').innerText = title;
+      document.getElementById('modal-confirm-content').innerText = content;
+      confirmCallback = callback;
+      document.getElementById('modal-confirm').classList.remove('hidden');
+    }
+
+    // --- EVENTS SETUP ---
+    document.addEventListener('DOMContentLoaded', () => {
+      initFirebase();
+      renderAll();
+
+      // Tool clicks
+      document.getElementById('ui-tools').addEventListener('click', (e) => {
+        const btn = e.target.closest('.tool-btn');
+        if(btn) { state.activeTool = btn.dataset.tool; renderTools(); lucide.createIcons(); }
+      });
+
+      // Inventory clicks
+      document.getElementById('ui-inventory').addEventListener('click', (e) => {
+        const btn = e.target.closest('.inv-btn');
+        if(btn) { state.selectedSeed = btn.dataset.seed; state.activeTool = 'plant'; renderInventory(); renderTools(); lucide.createIcons(); }
+      });
+
+      // Plot clicks
+      document.getElementById('ui-plots').addEventListener('click', (e) => {
+        const plotEl = e.target.closest('.plot-item');
+        if(plotEl) handlePlotInteraction(parseInt(plotEl.dataset.plot), e);
+      });
+
+      // Shop clicks
+      document.getElementById('ui-shop').addEventListener('click', (e) => {
+        const btn = e.target.closest('.buy-btn');
+        if(btn) {
+          const cropId = btn.dataset.buy;
+          const qty = parseInt(btn.dataset.qty);
+          const totalCost = CROPS_DATA[cropId].seedPrice * qty;
+          if (state.coins < totalCost) {
+            showModal("金幣不足", `購買 ${qty} 個 ${CROPS_DATA[cropId].name} 需要 ${totalCost} 金幣，趕快去採收作物吧！`, '🪙');
+            return;
+          }
+          state.coins -= totalCost;
+          state.inventory[cropId] = (state.inventory[cropId] || 0) + qty;
+          triggerFloat(`🛍️ 購買 ${qty}x ${CROPS_DATA[cropId].name}`, window.innerWidth/2, 100, "text-emerald-500");
+          renderHeader(); renderInventory(); renderShop(); lucide.createIcons();
+        }
+      });
+
+      // Tabs
+      document.getElementById('ui-tabs-nav').addEventListener('click', (e) => {
+        const btn = e.target.closest('.tab-btn');
+        if(btn) {
+          const tabId = btn.dataset.tab;
+          state.activeTab = tabId;
+          document.querySelectorAll('.tab-btn').forEach(b => {
+             if(b.dataset.tab === tabId) b.className = "tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all bg-white text-slate-900 shadow-sm";
+             else b.className = "tab-btn flex-1 py-2 rounded-xl flex items-center justify-center gap-1.5 text-xs font-bold transition-all text-slate-700 hover:bg-white/10";
+          });
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+          document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+        }
+      });
+
+      // Extra Buttons
+      document.getElementById('btn-water-all').addEventListener('click', (e) => {
+        let watered = 0;
+        state.plots.forEach(p => { if(p.plant && !p.watered){ p.watered = true; watered++; }});
+        if(watered > 0) triggerFloat(`💧 一鍵澆水完成 (${watered})`, e.clientX, e.clientY, "text-sky-500");
+        else triggerFloat("🍃 沒有需要澆水的", e.clientX, e.clientY, "text-slate-600");
+        renderPlots(); lucide.createIcons();
+      });
+
+      document.getElementById('btn-save').addEventListener('click', saveCloudData);
+      
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        showConfirm("🧙 確定重置魔法花園嗎？", "這將會清除所有的作物、背包種子與等級進度，無法復原！", () => {
+          state.coins = 100; state.level = 1; state.xp = 0;
+          state.inventory = getInitialInventory();
+          state.plots.forEach(p => { p.plant = null; p.progress = 0; p.watered = false; });
+          triggerFloat("🧹 花園重置完成", window.innerWidth/2, window.innerHeight/2, "text-rose-500");
+          renderAll();
+        });
+      });
+
+      // Modal Closers
+      document.getElementById('btn-modal-info-close').addEventListener('click', () => document.getElementById('modal-info').classList.add('hidden'));
+      document.getElementById('btn-modal-confirm-cancel').addEventListener('click', () => document.getElementById('modal-confirm').classList.add('hidden'));
+      document.getElementById('btn-modal-confirm-ok').addEventListener('click', () => {
+        document.getElementById('modal-confirm').classList.add('hidden');
+        if(confirmCallback) confirmCallback();
+      });
+
+      // GAME LOOPS
+      setInterval(() => {
+        let plotsChanged = false;
+        const activeWeather = WEATHER_TYPES.find(w => w.id === state.weather);
+        const speedFactor = activeWeather ? activeWeather.speedMult : 1.0;
+
+        state.plots.forEach(plot => {
+          if (!plot.plant || plot.progress >= 100) return;
+          const crop = CROPS_DATA[plot.plant];
+          const isWatered = state.weather === 'Rain' ? true : plot.watered;
+          if(plot.watered !== isWatered) plot.watered = isWatered;
+          
+          const waterBonus = isWatered ? 2.0 : 1.0;
+          const increment = (100 / crop.growTime) * speedFactor * waterBonus;
+          plot.progress = Math.min(100, plot.progress + increment);
+          plotsChanged = true;
+        });
+
+        if(plotsChanged) { renderPlots(); lucide.createIcons(); }
+        if (Math.random() < 0.08) spawnRandomEvent();
+      }, 1000);
+
+      setInterval(() => {
+        const rw = WEATHER_TYPES[Math.floor(Math.random() * WEATHER_TYPES.length)];
+        state.weather = rw.id;
+        triggerFloat(`🌈 天氣轉為 [${rw.name}]`, window.innerWidth/2, 80, "text-sky-500 font-bold");
+        renderWeather(); lucide.createIcons();
+      }, 45000);
+    });
+  </script>
+</body>
+</html>
